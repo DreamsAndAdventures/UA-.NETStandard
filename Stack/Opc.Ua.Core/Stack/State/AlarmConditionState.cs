@@ -243,20 +243,29 @@ namespace Opc.Ua
                 m_oneShot = oneShot;
                 m_unshelveTime = DateTime.MinValue;
 
-                if (oneShot)
-                {                    
-                    this.ShelvingState.CauseProcessingCompleted(context, Methods.ShelvedStateMachineType_OneShotShelve);
-                }
-                else
+                // Archie. Unshelve time is still valid even for oneshot
+                double maxTimeShelved = (double)int.MaxValue;
+                if ( this.MaxTimeShelved != null && this.MaxTimeShelved.Value > 0 )
                 {
-                    if (shelvingTime > 0)
-                    {
-                        m_unshelveTime = DateTime.UtcNow.AddMilliseconds(shelvingTime);
-                        m_unshelveTimer = new Timer(OnTimerExpired, context, (int)shelvingTime, Timeout.Infinite);
-                    }
-
-                    this.ShelvingState.CauseProcessingCompleted(context, Methods.ShelvedStateMachineType_TimedShelve);
+                    maxTimeShelved = this.MaxTimeShelved.Value;
                 }
+
+                double shelveTime = maxTimeShelved;
+
+                uint state = Methods.ShelvedStateMachineType_OneShotShelve;
+                if (!oneShot)
+                {
+                    if (shelvingTime > 0 && shelvingTime < shelveTime)
+                    {
+                        shelveTime = shelvingTime;
+                    }
+                    state = Methods.ShelvedStateMachineType_TimedShelve;
+                }
+
+                this.ShelvingState.UnshelveTime.Value = shelveTime;
+                m_unshelveTime = DateTime.UtcNow.AddMilliseconds((int)shelveTime);
+                m_unshelveTimer = new Timer(OnTimerExpired, context, (int)shelveTime, Timeout.Infinite);
+                this.ShelvingState.CauseProcessingCompleted(context, state);
             }
 
             UpdateEffectiveState(context);
@@ -372,7 +381,7 @@ namespace Opc.Ua
         /// <summary>
         /// Checks whether the OneShotShelve method is executable.
         /// </summary>
-        protected ServiceResult OnReadUnshelveTime(
+        public ServiceResult OnReadUnshelveTime(
             ISystemContext context,
             NodeState node,
             ref object value)
@@ -382,6 +391,11 @@ namespace Opc.Ua
             if (m_unshelveTime != DateTime.MinValue)
             {
                 delta = (m_unshelveTime - DateTime.UtcNow).TotalMilliseconds;
+
+                if ( delta < 0 )
+                {
+                    m_unshelveTime = DateTime.MinValue;
+                }
             }
 
             value = delta;
