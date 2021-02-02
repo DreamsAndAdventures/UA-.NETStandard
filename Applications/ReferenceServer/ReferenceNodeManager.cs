@@ -92,7 +92,14 @@ namespace Quickstarts.ReferenceServer
 
                 if (id != null)
                 {
-                    return new NodeId(id + "_" + instance.SymbolicName, instance.Parent.NodeId.NamespaceIndex);
+                    if (id.StartsWith("Alarms."))
+                    {
+                        return new NodeId(id + "." + instance.SymbolicName, instance.Parent.NodeId.NamespaceIndex );
+                    }
+                    else
+                    {
+                        return new NodeId(id + "_" + instance.SymbolicName, instance.Parent.NodeId.NamespaceIndex);
+                    }
                 }
             }
 
@@ -192,6 +199,17 @@ namespace Quickstarts.ReferenceServer
 
                 try
                 {
+                    #region Archie
+
+                    if ( m_alarms == null )
+                    {
+                        m_alarms = new Alarms(this);
+                    }
+
+                    m_alarms.CreateAlarms(root);
+
+                    #endregion
+
                     #region Scalar_Static
                     FolderState scalarFolder = CreateFolder(root, "Scalar", "Scalar");
                     BaseDataVariableState scalarInstructions = CreateVariable(scalarFolder, "Scalar_Instructions", "Scalar_Instructions", DataTypeIds.String, ValueRanks.Scalar);
@@ -367,36 +385,36 @@ namespace Quickstarts.ReferenceServer
                     variables.Add(CreateVariable(arrayDymnamicFolder, staticArraysDynamic + "XmlElement", "XmlElement", DataTypeIds.XmlElement, ValueRanks.OneOrMoreDimensions));
                     #endregion
 
-                    #region Scalar_Static_Mass
-                    // create 100 instances of each static scalar type
-                    FolderState massFolder = CreateFolder(staticFolder, "Scalar_Static_Mass", "Mass");
-                    const string staticMass = "Scalar_Static_Mass_";
-                    variables.AddRange(CreateVariables(massFolder, staticMass + "Boolean", "Boolean", DataTypeIds.Boolean, ValueRanks.Scalar, 100));
-                    variables.AddRange(CreateVariables(massFolder, staticMass + "Byte", "Byte", DataTypeIds.Byte, ValueRanks.Scalar, 100));
-                    variables.AddRange(CreateVariables(massFolder, staticMass + "ByteString", "ByteString", DataTypeIds.ByteString, ValueRanks.Scalar, 100));
-                    variables.AddRange(CreateVariables(massFolder, staticMass + "DateTime", "DateTime", DataTypeIds.DateTime, ValueRanks.Scalar, 100));
-                    variables.AddRange(CreateVariables(massFolder, staticMass + "Double", "Double", DataTypeIds.Double, ValueRanks.Scalar, 100));
-                    variables.AddRange(CreateVariables(massFolder, staticMass + "Duration", "Duration", DataTypeIds.Duration, ValueRanks.Scalar, 100));
-                    variables.AddRange(CreateVariables(massFolder, staticMass + "Float", "Float", DataTypeIds.Float, ValueRanks.Scalar, 100));
-                    variables.AddRange(CreateVariables(massFolder, staticMass + "Guid", "Guid", DataTypeIds.Guid, ValueRanks.Scalar, 100));
-                    variables.AddRange(CreateVariables(massFolder, staticMass + "Int16", "Int16", DataTypeIds.Int16, ValueRanks.Scalar, 100));
-                    variables.AddRange(CreateVariables(massFolder, staticMass + "Int32", "Int32", DataTypeIds.Int32, ValueRanks.Scalar, 100));
-                    variables.AddRange(CreateVariables(massFolder, staticMass + "Int64", "Int64", DataTypeIds.Int64, ValueRanks.Scalar, 100));
-                    variables.AddRange(CreateVariables(massFolder, staticMass + "Integer", "Integer", DataTypeIds.Integer, ValueRanks.Scalar, 100));
-                    variables.AddRange(CreateVariables(massFolder, staticMass + "LocalizedText", "LocalizedText", DataTypeIds.LocalizedText, ValueRanks.Scalar, 100));
-                    variables.AddRange(CreateVariables(massFolder, staticMass + "NodeId", "NodeId", DataTypeIds.NodeId, ValueRanks.Scalar, 100));
-                    variables.AddRange(CreateVariables(massFolder, staticMass + "Number", "Number", DataTypeIds.Number, ValueRanks.Scalar, 100));
-                    variables.AddRange(CreateVariables(massFolder, staticMass + "SByte", "SByte", DataTypeIds.SByte, ValueRanks.Scalar, 100));
-                    variables.AddRange(CreateVariables(massFolder, staticMass + "String", "String", DataTypeIds.String, ValueRanks.Scalar, 100));
-                    variables.AddRange(CreateVariables(massFolder, staticMass + "Time", "Time", DataTypeIds.Time, ValueRanks.Scalar, 100));
-                    variables.AddRange(CreateVariables(massFolder, staticMass + "UInt16", "UInt16", DataTypeIds.UInt16, ValueRanks.Scalar, 100));
-                    variables.AddRange(CreateVariables(massFolder, staticMass + "UInt32", "UInt32", DataTypeIds.UInt32, ValueRanks.Scalar, 100));
-                    variables.AddRange(CreateVariables(massFolder, staticMass + "UInt64", "UInt64", DataTypeIds.UInt64, ValueRanks.Scalar, 100));
-                    variables.AddRange(CreateVariables(massFolder, staticMass + "UInteger", "UInteger", DataTypeIds.UInteger, ValueRanks.Scalar, 100));
-                    variables.AddRange(CreateVariables(massFolder, staticMass + "UtcTime", "UtcTime", DataTypeIds.UtcTime, ValueRanks.Scalar, 100));
-                    variables.AddRange(CreateVariables(massFolder, staticMass + "Variant", "Variant", BuiltInType.Variant, ValueRanks.Scalar, 100));
-                    variables.AddRange(CreateVariables(massFolder, staticMass + "XmlElement", "XmlElement", DataTypeIds.XmlElement, ValueRanks.Scalar, 100));
-                    #endregion
+                    //#region Scalar_Static_Mass
+                    //// create 100 instances of each static scalar type
+                    //FolderState massFolder = CreateFolder(staticFolder, "Scalar_Static_Mass", "Mass");
+                    //const string staticMass = "Scalar_Static_Mass_";
+                    //variables.AddRange(CreateVariables(massFolder, staticMass + "Boolean", "Boolean", DataTypeIds.Boolean, ValueRanks.Scalar, 100));
+                    //variables.AddRange(CreateVariables(massFolder, staticMass + "Byte", "Byte", DataTypeIds.Byte, ValueRanks.Scalar, 100));
+                    //variables.AddRange(CreateVariables(massFolder, staticMass + "ByteString", "ByteString", DataTypeIds.ByteString, ValueRanks.Scalar, 100));
+                    //variables.AddRange(CreateVariables(massFolder, staticMass + "DateTime", "DateTime", DataTypeIds.DateTime, ValueRanks.Scalar, 100));
+                    //variables.AddRange(CreateVariables(massFolder, staticMass + "Double", "Double", DataTypeIds.Double, ValueRanks.Scalar, 100));
+                    //variables.AddRange(CreateVariables(massFolder, staticMass + "Duration", "Duration", DataTypeIds.Duration, ValueRanks.Scalar, 100));
+                    //variables.AddRange(CreateVariables(massFolder, staticMass + "Float", "Float", DataTypeIds.Float, ValueRanks.Scalar, 100));
+                    //variables.AddRange(CreateVariables(massFolder, staticMass + "Guid", "Guid", DataTypeIds.Guid, ValueRanks.Scalar, 100));
+                    //variables.AddRange(CreateVariables(massFolder, staticMass + "Int16", "Int16", DataTypeIds.Int16, ValueRanks.Scalar, 100));
+                    //variables.AddRange(CreateVariables(massFolder, staticMass + "Int32", "Int32", DataTypeIds.Int32, ValueRanks.Scalar, 100));
+                    //variables.AddRange(CreateVariables(massFolder, staticMass + "Int64", "Int64", DataTypeIds.Int64, ValueRanks.Scalar, 100));
+                    //variables.AddRange(CreateVariables(massFolder, staticMass + "Integer", "Integer", DataTypeIds.Integer, ValueRanks.Scalar, 100));
+                    //variables.AddRange(CreateVariables(massFolder, staticMass + "LocalizedText", "LocalizedText", DataTypeIds.LocalizedText, ValueRanks.Scalar, 100));
+                    //variables.AddRange(CreateVariables(massFolder, staticMass + "NodeId", "NodeId", DataTypeIds.NodeId, ValueRanks.Scalar, 100));
+                    //variables.AddRange(CreateVariables(massFolder, staticMass + "Number", "Number", DataTypeIds.Number, ValueRanks.Scalar, 100));
+                    //variables.AddRange(CreateVariables(massFolder, staticMass + "SByte", "SByte", DataTypeIds.SByte, ValueRanks.Scalar, 100));
+                    //variables.AddRange(CreateVariables(massFolder, staticMass + "String", "String", DataTypeIds.String, ValueRanks.Scalar, 100));
+                    //variables.AddRange(CreateVariables(massFolder, staticMass + "Time", "Time", DataTypeIds.Time, ValueRanks.Scalar, 100));
+                    //variables.AddRange(CreateVariables(massFolder, staticMass + "UInt16", "UInt16", DataTypeIds.UInt16, ValueRanks.Scalar, 100));
+                    //variables.AddRange(CreateVariables(massFolder, staticMass + "UInt32", "UInt32", DataTypeIds.UInt32, ValueRanks.Scalar, 100));
+                    //variables.AddRange(CreateVariables(massFolder, staticMass + "UInt64", "UInt64", DataTypeIds.UInt64, ValueRanks.Scalar, 100));
+                    //variables.AddRange(CreateVariables(massFolder, staticMass + "UInteger", "UInteger", DataTypeIds.UInteger, ValueRanks.Scalar, 100));
+                    //variables.AddRange(CreateVariables(massFolder, staticMass + "UtcTime", "UtcTime", DataTypeIds.UtcTime, ValueRanks.Scalar, 100));
+                    //variables.AddRange(CreateVariables(massFolder, staticMass + "Variant", "Variant", BuiltInType.Variant, ValueRanks.Scalar, 100));
+                    //variables.AddRange(CreateVariables(massFolder, staticMass + "XmlElement", "XmlElement", DataTypeIds.XmlElement, ValueRanks.Scalar, 100));
+                    //#endregion
 
                     #region Scalar_Simulation
                     FolderState simulationFolder = CreateFolder(scalarFolder, "Scalar_Simulation", "Simulation");
@@ -1529,7 +1547,7 @@ namespace Quickstarts.ReferenceServer
         /// <summary>
         /// Creates a new object type.
         /// </summary>
-        private BaseObjectTypeState CreateObjectType(NodeState parent, IDictionary<NodeId, IList<IReference>> externalReferences, string path, string name)
+        public BaseObjectTypeState CreateObjectType(NodeState parent, IDictionary<NodeId, IList<IReference>> externalReferences, string path, string name)
         {
             BaseObjectTypeState type = new BaseObjectTypeState();
 
@@ -2152,6 +2170,22 @@ namespace Quickstarts.ReferenceServer
             return ServiceResult.Good;
         }
 
+        #region Archie
+
+        public ServiceResult OnWriteAlarmTrigger(
+            ISystemContext context,
+            NodeState node,
+            NumericRange indexRange,
+            QualifiedName dataEncoding,
+            ref object value,
+            ref StatusCode statusCode,
+            ref DateTime timestamp)
+        {
+            return m_alarms.OnWriteAlarmTrigger( context, node, indexRange, dataEncoding, ref value, ref statusCode, ref timestamp );
+        }
+
+        #endregion
+
         /// <summary>
         /// Creates a new variable.
         /// </summary>
@@ -2648,6 +2682,7 @@ namespace Quickstarts.ReferenceServer
                         variable.ClearChangeMasks(SystemContext, false);
                     }
                 }
+                m_alarms.Loop();
             }
             catch (Exception e)
             {
@@ -2732,6 +2767,16 @@ namespace Quickstarts.ReferenceServer
         private UInt16 m_simulationInterval = 1000;
         private bool m_simulationEnabled = true;
         private List<BaseDataVariableState> m_dynamicNodes;
+        #endregion
+
+        #region Archie
+        private Alarms m_alarms = null;
+
+        public void PublicAddPredefinedNode( NodeState nodeState)
+        {
+            AddPredefinedNode(SystemContext, nodeState);
+        }
+
         #endregion
     }
 }

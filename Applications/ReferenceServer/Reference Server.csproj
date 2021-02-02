@@ -74,6 +74,38 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Additions\AlarmControllers\ChatterAlarmController.cs" />
+    <Compile Include="Additions\AlarmControllers\FastToggleAlarmController.cs" />
+    <Compile Include="Additions\AlarmControllers\SteadyIntervalAlarmController.cs" />
+    <Compile Include="Additions\AlarmControllers\SuppressWhileActiveAlarmController.cs" />
+    <Compile Include="Additions\AlarmControllers\SuppressWhileInactiveAlarmController.cs" />
+    <Compile Include="Additions\AlarmHolders\AcknowledgeableConditionTypeHolder.cs" />
+    <Compile Include="Additions\AlarmHolders\AlarmConditionTypeHolder.cs" />
+    <Compile Include="Additions\AlarmControllers\AlarmController.cs" />
+    <Compile Include="Additions\AlarmHolders\AlarmHolder.cs" />
+    <Compile Include="Additions\AlarmHolders\CertificateExpirationTypeHolder.cs" />
+    <Compile Include="Additions\AlarmHolders\DerivedSystemOffNormalAlarmTypeHolder.cs" />
+    <Compile Include="Additions\AlarmHolders\DiscrepancyAlarmTypeHolder.cs" />
+    <Compile Include="Additions\AlarmHolders\DiscreteHolder.cs" />
+    <Compile Include="Additions\AlarmHolders\ExclusiveDeviationHolder.cs" />
+    <Compile Include="Additions\AlarmHolders\ExclusiveLevelHolder.cs" />
+    <Compile Include="Additions\AlarmHolders\ExclusiveLimitHolder.cs" />
+    <Compile Include="Additions\AlarmHolders\ExclusiveRateOfChangeHolder.cs" />
+    <Compile Include="Additions\AlarmHolders\LimitAlarmTypeHolder.cs" />
+    <Compile Include="Additions\AlarmHolders\NonExclusiveDeviationHolder.cs" />
+    <Compile Include="Additions\AlarmHolders\NonExclusiveLevelHolder.cs" />
+    <Compile Include="Additions\AlarmHolders\NonExclusiveLimitHolder.cs" />
+    <Compile Include="Additions\AlarmHolders\NonExclusiveRateOfChangeHolder.cs" />
+    <Compile Include="Additions\AlarmHolders\OffNormalAlarmTypeHolder.cs" />
+    <Compile Include="Additions\AlarmHolders\SystemOffNormalAlarmTypeHolder.cs" />
+    <Compile Include="Additions\Alarms.cs" />
+    <Compile Include="Additions\AlarmHolders\BaseEventTypeHolder.cs" />
+    <Compile Include="Additions\AlarmHolders\ConditionTypeHolder.cs" />
+    <Compile Include="Additions\Defines.cs" />
+    <Compile Include="Additions\DerivedAlarmTypes\DerivedSystemOffNormalAlarmType.cs" />
+    <Compile Include="Additions\Helpers.cs" />
+    <Compile Include="Additions\SupportedAlarmConditionType.cs" />
+    <Compile Include="Additions\AlarmControllers\SuppressAlarmController.cs" />
     <Compile Include="MonitoredItemEventLogDlg.cs">
       <SubType>Form</SubType>
     </Compile>
