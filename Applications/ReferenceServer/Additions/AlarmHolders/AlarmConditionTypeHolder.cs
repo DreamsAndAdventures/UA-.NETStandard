@@ -102,6 +102,7 @@ namespace Quickstarts.ReferenceServer
                 
                 alarm.OnShelve = OnShelve;
                 alarm.OnTimedUnshelve = OnTimedUnshelve;
+                alarm.UnshelveTimeUpdateRate = 2000;
             }
             else
             {
@@ -172,29 +173,29 @@ namespace Quickstarts.ReferenceServer
             // Don't have to worry about changing state to Unshelved, there is an SDK timer to deal with that.
             bool update = false;
 
-            if (Optional)
-            {
-                AlarmConditionState alarm = GetAlarm();
-                if (alarm.ShelvingState.UnshelveTime.Value > 0)
-                {
-                    bool waiting = true;
-                }
+            //if (Optional)
+            //{
+            //    AlarmConditionState alarm = GetAlarm();
+            //    if (alarm.ShelvingState.UnshelveTime.Value > 0)
+            //    {
+            //        bool waiting = true;
+            //    }
 
-                object unshelveTimeObject = new object();
-                alarm.OnReadUnshelveTime(SystemContext, null, ref unshelveTimeObject);
-                double unshelveTime = (double)unshelveTimeObject;
+            //    object unshelveTimeObject = new object();
+            //    alarm.OnReadUnshelveTime(SystemContext, null, ref unshelveTimeObject);
+            //    double unshelveTime = (double)unshelveTimeObject;
 
-                if (alarm.ShelvingState.UnshelveTime.Value > 0)
-                {
-                    bool waiting = true;
-                }
+            //    if (alarm.ShelvingState.UnshelveTime.Value > 0)
+            //    {
+            //        bool waiting = true;
+            //    }
 
-                if (unshelveTime != alarm.ShelvingState.UnshelveTime.Value)
-                {
-                    alarm.ShelvingState.UnshelveTime.Value = unshelveTime;
-                    update = true;
-                }
-            }
+            //    if (unshelveTime != alarm.ShelvingState.UnshelveTime.Value)
+            //    {
+            //        alarm.ShelvingState.UnshelveTime.Value = unshelveTime;
+            //        update = true;
+            //    }
+            //}
 
             return update;
         }
