@@ -60,10 +60,14 @@ namespace Quickstarts.ReferenceServer
                 ApplicationConfiguration config = application.LoadApplicationConfiguration(false).Result;
 
                 LoggerConfiguration loggerConfiguration = new LoggerConfiguration();
+                Serilog.Events.LogEventLevel level = Serilog.Events.LogEventLevel.Fatal;
 #if DEBUG
-                loggerConfiguration.WriteTo.Debug(restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Warning);
+//                loggerConfiguration.WriteTo.Debug(restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Warning);
+                loggerConfiguration.WriteTo.Debug(restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Verbose);
+                level = Serilog.Events.LogEventLevel.Verbose;
+                config.TraceConfiguration.TraceMasks = Utils.TraceMasks.Operation;
 #endif
-                SerilogTraceLogger.Create(loggerConfiguration, config);
+                SerilogTraceLogger.Create(loggerConfiguration, config, level);
 
                 // check the application certificate.
                 bool certOk = application.CheckApplicationInstanceCertificate(false, 0).Result;

@@ -78,13 +78,14 @@ namespace Quickstarts.ReferenceServer
                         BrowseNames.ShelvingState,
                         false);
                 }
+                if (alarm.MaxTimeShelved == null)
+                {
+                    // Off normal does not create MaxTimeShelved.
+                    alarm.MaxTimeShelved = new PropertyState<double>(alarm);
+                }
+
             }
 
-            if (alarm.MaxTimeShelved == null)
-            {
-                // Off normal does not create MaxTimeShelved.
-                alarm.MaxTimeShelved = new PropertyState<double>(alarm);
-            }
 
             // Call the base class to set parameters
             base.Initialize(parent, alarmTypeIdentifier, name, alarmConditionType, optional);
@@ -92,7 +93,6 @@ namespace Quickstarts.ReferenceServer
             alarm.SetActiveState(SystemContext, active: false);
             alarm.InputNode.Value = new NodeId(m_trigger.NodeId);
 
-            alarm.MaxTimeShelved.Value = maxTimeShelved;
 
             if (optional)
             {
@@ -103,6 +103,8 @@ namespace Quickstarts.ReferenceServer
                 alarm.OnShelve = OnShelve;
                 alarm.OnTimedUnshelve = OnTimedUnshelve;
                 alarm.UnshelveTimeUpdateRate = 2000;
+
+                alarm.MaxTimeShelved.Value = maxTimeShelved;
             }
             else
             {

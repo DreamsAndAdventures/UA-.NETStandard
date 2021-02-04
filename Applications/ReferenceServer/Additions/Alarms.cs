@@ -56,11 +56,24 @@ namespace Quickstarts.ReferenceServer
             MethodState disableAutoRun = Helpers.CreateMethod(alarmsFolder, NameSpaceIndex, "DisableAutoRun", "DisableAutoRun");
             disableAutoRun.OnCallMethod = new GenericMethodCalledEventHandler(OnDisableAutoRun);
 
-            SupportedAlarmConditionType[] conditionTypes = {
-                new SupportedAlarmConditionType( "Process", "ProcessConditionClassType",  ObjectTypeIds.ProcessConditionClassType ),
-                new SupportedAlarmConditionType( "Maintenance", "MaintenanceConditionClassType",  ObjectTypeIds.MaintenanceConditionClassType ),
-                new SupportedAlarmConditionType( "System", "SystemConditionClassType",  ObjectTypeIds.SystemConditionClassType )
-            };
+            SupportedAlarmConditionType[] conditionTypes = null;
+
+            bool useFullConditionTypes = true;
+
+            if ( useFullConditionTypes )
+            {
+                SupportedAlarmConditionType[] tempConditionTypes = {
+                    new SupportedAlarmConditionType( "Process", "ProcessConditionClassType",  ObjectTypeIds.ProcessConditionClassType ),
+                    new SupportedAlarmConditionType( "Maintenance", "MaintenanceConditionClassType",  ObjectTypeIds.MaintenanceConditionClassType ),
+                    new SupportedAlarmConditionType( "System", "SystemConditionClassType",  ObjectTypeIds.SystemConditionClassType ) };
+                conditionTypes = tempConditionTypes;
+            }
+            else
+            {
+                SupportedAlarmConditionType[] tempConditionTypes = {
+                    new SupportedAlarmConditionType( "Process", "ProcessConditionClassType",  ObjectTypeIds.ProcessConditionClassType ) };
+                conditionTypes = tempConditionTypes;
+            }
 
 #if RUN_CERTIFICATES
 
@@ -84,11 +97,12 @@ namespace Quickstarts.ReferenceServer
             MethodState resetExpired = Helpers.CreateMethod(certificateFolder, NameSpaceIndex, Defines.RESET_EXPIRED_CERTIFICATE_NAME, Defines.RESET_EXPIRED_CERTIFICATE_NAME);
             resetExpired.OnCallMethod = new GenericMethodCalledEventHandler(OnResetExpiredCertificate);
 
+            SupportedAlarmConditionType certificateSupportedAlarmConditionType = conditionTypes[conditionTypes.Length - 1];
             m_expired = new CertificateExpirationTypeHolder(
                 this,
                 certificateFolder,
                 Defines.EXPIRED_LIMIT_NAME,
-                conditionTypes[2],
+                certificateSupportedAlarmConditionType,
                 Type.GetType("Quickstarts.ReferenceServer.FastToggleAlarmController"),
                 1000,
                 optional: false);
@@ -98,7 +112,7 @@ namespace Quickstarts.ReferenceServer
                 this,
                 certificateFolder,
                 Defines.INSIDE_LIMIT_NAME,
-                conditionTypes[2],
+                certificateSupportedAlarmConditionType,
                 Type.GetType("Quickstarts.ReferenceServer.FastToggleAlarmController"),
                 1000,
                 optional: false);
@@ -108,7 +122,7 @@ namespace Quickstarts.ReferenceServer
                 this,
                 certificateFolder,
                 Defines.OUTSIDE_LIMIT_NAME,
-                conditionTypes[2],
+                certificateSupportedAlarmConditionType,
                 Type.GetType("Quickstarts.ReferenceServer.FastToggleAlarmController"),
                 1000,
                 optional: false);
@@ -116,9 +130,9 @@ namespace Quickstarts.ReferenceServer
 
 #endif 
 
-
+            // string[] manualAuto = { /*"Manual",*/ "Auto" };
             string[] manualAuto = { "Manual", "Auto" };
-//            string[] manualAuto = { "Manual"/*, "Auto"*/ };
+            // string[] manualAuto = { "Manual"/*, "Auto"*/ };
             string[] optionalMandatory = { "Optional", "Mandatory" };
 
             for (int manualIndex = 0; manualIndex < manualAuto.Length; manualIndex++)
@@ -126,7 +140,7 @@ namespace Quickstarts.ReferenceServer
                 string manualAutoName = manualAuto[manualIndex];
                 string manualAutoNodeName = alarmsNodeName + "." + manualAutoName;
                 FolderState manualAutoFolder = Helpers.CreateFolder(alarmsFolder, NameSpaceIndex, manualAutoNodeName, manualAutoName);
-                bool useManual = manualIndex == 0;
+                bool useManual = manualAutoName == "Manual";
 
                 for (int optionalIndex = 0; optionalIndex < optionalMandatory.Length; optionalIndex++)
                 {
