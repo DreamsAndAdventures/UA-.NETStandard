@@ -53,7 +53,7 @@ namespace Quickstarts.ReferenceServer
 
             if (Optional)
             {
-                alarm.EngineeringUnits.Value = new EUInformation();
+                alarm.EngineeringUnits.Value = new EUInformation("NonExclusiveTestUnits", "UriHolder");
             }
         }
     }
