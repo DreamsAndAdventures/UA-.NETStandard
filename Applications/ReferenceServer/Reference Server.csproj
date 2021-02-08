@@ -76,6 +76,7 @@
   <ItemGroup>
     <Compile Include="Additions\AlarmControllers\ChatterAlarmController.cs" />
     <Compile Include="Additions\AlarmControllers\FastToggleAlarmController.cs" />
+    <Compile Include="Additions\AlarmControllers\LimitAlarmController.cs" />
     <Compile Include="Additions\AlarmControllers\SteadyIntervalAlarmController.cs" />
     <Compile Include="Additions\AlarmControllers\SuppressWhileActiveAlarmController.cs" />
     <Compile Include="Additions\AlarmControllers\SuppressWhileInactiveAlarmController.cs" />

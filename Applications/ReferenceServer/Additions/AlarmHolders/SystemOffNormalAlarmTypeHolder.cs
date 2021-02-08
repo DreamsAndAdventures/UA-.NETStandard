@@ -37,7 +37,7 @@ namespace Quickstarts.ReferenceServer
         {
             if (m_alarm == null)
             {
-                m_alarm = new OffNormalAlarmState(parent);
+                m_alarm = new SystemOffNormalAlarmState(parent);
             }
 
             base.Initialize(parent, alarmTypeIdentifier, name, alarmConditionType, optional, maxTimeShelved);

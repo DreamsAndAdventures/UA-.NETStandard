@@ -56,6 +56,12 @@ namespace Quickstarts.ReferenceServer
             MethodState disableAutoRun = Helpers.CreateMethod(alarmsFolder, NameSpaceIndex, "DisableAutoRun", "DisableAutoRun");
             disableAutoRun.OnCallMethod = new GenericMethodCalledEventHandler(OnDisableAutoRun);
 
+            // Setpoint NodeId
+            BaseDataVariableState deviationSetpoint = Helpers.CreateVariable(alarmsFolder, NameSpaceIndex, "DeviationSetpoint", "DeviationSetpoint");
+            deviationSetpoint.AccessLevel = AccessLevels.CurrentRead;
+            deviationSetpoint.UserAccessLevel = AccessLevels.CurrentRead;
+            deviationSetpoint.Value = 50;
+
             SupportedAlarmConditionType[] conditionTypes = null;
 
             bool useFullConditionTypes = true;
@@ -190,6 +196,22 @@ namespace Quickstarts.ReferenceServer
                         string derivedSystemOffNormalNodeName = conditionTypeNodeName + "." + derivedSystemOffNormalName;
                         FolderState derivedSystemOffNormalFolder = Helpers.CreateFolder(conditionTypeFolder, NameSpaceIndex,
                             derivedSystemOffNormalNodeName, derivedSystemOffNormalName);
+
+                        string limitName = "Limit";
+                        string limitNodeName = conditionTypeNodeName + "." + limitName;
+                        FolderState limitFolder = Helpers.CreateFolder(conditionTypeFolder, NameSpaceIndex,
+                            limitNodeName, limitName);
+
+                        string exclusiveName = "Exclusive";
+                        string exclusiveNodeName = conditionTypeNodeName + "." + exclusiveName;
+                        FolderState exclusiveFolder = Helpers.CreateFolder(conditionTypeFolder, NameSpaceIndex,
+                            exclusiveNodeName, exclusiveName);
+
+                        string nonExclusiveName = "NonExclusive";
+                        string nonExclusiveNodeName = conditionTypeNodeName + "." + nonExclusiveName;
+                        FolderState nonExclusiveFolder = Helpers.CreateFolder(conditionTypeFolder, NameSpaceIndex,
+                            nonExclusiveNodeName, nonExclusiveName);
+
 
                         int start = 1;
                         int desired = start + 2;
@@ -329,6 +351,103 @@ namespace Quickstarts.ReferenceServer
                             m_alarms.Add(derived.MapName, derived);
 #endif
 
+                            AlarmHolder limit = new LimitAlarmTypeHolder(
+                                this,
+                                limitFolder,
+                                intervalString,
+                                conditionType,
+                                Type.GetType("Quickstarts.ReferenceServer.LimitAlarmController"),
+                                interval,
+                                optional: useOptional);
+                            m_alarms.Add(limit.MapName, limit);
+
+                            AlarmHolder exclusiveLimit = new ExclusiveLimitHolder(
+                                this,
+                                exclusiveFolder,
+                                intervalString,
+                                conditionType,
+                                Type.GetType("Quickstarts.ReferenceServer.LimitAlarmController"),
+                                interval,
+                                optional: useOptional);
+                            m_alarms.Add(exclusiveLimit.MapName, exclusiveLimit);
+
+
+                            AlarmHolder nonExclusiveLimit = new NonExclusiveLimitHolder(
+                                this,
+                                nonExclusiveFolder,
+                                intervalString,
+                                conditionType,
+                                Type.GetType("Quickstarts.ReferenceServer.LimitAlarmController"),
+                                interval,
+                                optional: useOptional);
+                            m_alarms.Add(nonExclusiveLimit.MapName, nonExclusiveLimit);
+
+                            AlarmHolder exclusiveLevel = new ExclusiveLevelHolder(
+                                this,
+                                exclusiveFolder,
+                                intervalString,
+                                conditionType,
+                                Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                                interval,
+                                optional: useOptional);
+                            m_alarms.Add(exclusiveLevel.MapName, exclusiveLevel);
+
+                            AlarmHolder nonExclusiveLevel = new NonExclusiveLevelHolder(
+                                this,
+                                nonExclusiveFolder,
+                                intervalString,
+                                conditionType,
+                                Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                                interval,
+                                optional: useOptional);
+                            m_alarms.Add(nonExclusiveLevel.MapName, nonExclusiveLevel);
+
+                            AlarmHolder exclusiveRateOfChange = new ExclusiveRateOfChangeHolder(
+                                this,
+                                exclusiveFolder,
+                                intervalString,
+                                conditionType,
+                                Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                                interval,
+                                optional: useOptional);
+                            m_alarms.Add(exclusiveRateOfChange.MapName, exclusiveRateOfChange);
+
+
+                            AlarmHolder nonExclusiveRateOfChange = new NonExclusiveRateOfChangeHolder(
+                                this,
+                                nonExclusiveFolder,
+                                intervalString,
+                                conditionType,
+                                Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                                interval,
+                                optional: useOptional);
+                            m_alarms.Add(nonExclusiveRateOfChange.MapName, nonExclusiveRateOfChange);
+
+                            AlarmHolder exclusiveDeviation = new ExclusiveDeviationHolder(
+                                this,
+                                exclusiveFolder,
+                                intervalString,
+                                conditionType,
+                                Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                                interval,
+                                deviationSetpoint.NodeId,
+                                optional: useOptional);
+                            m_alarms.Add(exclusiveDeviation.MapName, exclusiveDeviation);
+
+
+                            AlarmHolder nonExclusiveDeviation = new NonExclusiveDeviationHolder(
+                                this,
+                                nonExclusiveFolder,
+                                intervalString,
+                                conditionType,
+                                Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                                interval,
+                                deviationSetpoint.NodeId,
+                                optional: useOptional);
+                            m_alarms.Add(nonExclusiveDeviation.MapName, nonExclusiveDeviation);
+
+
+
                         }
                     }
                 }
@@ -339,11 +458,16 @@ namespace Quickstarts.ReferenceServer
 
         }
 
+        private int m_missed = 0;
+        private int m_success = 0;
+
+
         public void Loop()
         {
             if (m_allowEntry)
             {
                 m_allowEntry = false;
+                m_success++;
                 try
                 {
                     ConfigurationNodeManager configurationNodeManager =
@@ -368,7 +492,11 @@ namespace Quickstarts.ReferenceServer
             }
             else
             {
-                Debug.WriteLine(DateTime.UtcNow.ToLocalTime().ToLongTimeString() + " Missed Loop");
+                if (m_success > 0)
+                {
+                    m_missed++; 
+                    Debug.WriteLine(DateTime.UtcNow.ToLocalTime().ToLongTimeString() + " Missed Loop " + m_missed.ToString() + " Success " + m_success.ToString() );
+                }
             }
         }
 

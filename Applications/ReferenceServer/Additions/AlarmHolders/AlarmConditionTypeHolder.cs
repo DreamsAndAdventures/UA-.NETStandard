@@ -44,7 +44,7 @@ namespace Quickstarts.ReferenceServer
                 m_alarm = new AlarmConditionState(parent);
             }
 
-            AlarmConditionState alarm = (AlarmConditionState)m_alarm;
+            AlarmConditionState alarm = GetAlarm();
 
             if (optional)
             {
@@ -105,17 +105,6 @@ namespace Quickstarts.ReferenceServer
                 alarm.UnshelveTimeUpdateRate = 2000;
 
                 alarm.MaxTimeShelved.Value = maxTimeShelved;
-            }
-            else
-            {
-                //MemoryStream strm = new MemoryStream();
-                //m_alarm.SaveAsBinary(SystemContext, strm);
-                //string result = System.Text.Encoding.UTF8.GetString(strm.GetBuffer());
-                //MemoryStream xmlStrm = new MemoryStream();
-                //m_alarm.SaveAsXml(SystemContext, xmlStrm);
-                //string xmlResult = System.Text.Encoding.UTF8.GetString(xmlStrm.GetBuffer());
-
-                //bool wait = true;
             }
         }
 
