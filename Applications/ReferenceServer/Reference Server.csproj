@@ -74,6 +74,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Additions\AlarmControllers\BranchAlarmController.cs" />
     <Compile Include="Additions\AlarmControllers\ChatterAlarmController.cs" />
     <Compile Include="Additions\AlarmControllers\FastToggleAlarmController.cs" />
     <Compile Include="Additions\AlarmControllers\LimitAlarmController.cs" />

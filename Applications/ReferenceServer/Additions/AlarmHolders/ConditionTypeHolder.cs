@@ -11,6 +11,8 @@ namespace Quickstarts.ReferenceServer
 {
     public class ConditionTypeHolder : BaseEventTypeHolder
     {
+        private bool m_useBranching = false;
+
         protected ConditionTypeHolder(
             Alarms alarms,
             FolderState parent,
@@ -21,7 +23,10 @@ namespace Quickstarts.ReferenceServer
             bool optional) :
             base( alarms, parent, name, alarmConditionType, controllerType, interval, optional )
         {
-
+            if (controllerType.Name.Contains("BranchAlarmController"))
+            {
+                m_useBranching = true;
+            }
         }
 
         public void Initialize(
