@@ -110,6 +110,7 @@ namespace Quickstarts.ReferenceServer
             TypicalGetValue(minValue, maxValue, ref intValue, ref boolValue);
         }
 
+
         protected void TypicalGetValue(int minValue, int maxValue, ref int intValue, ref bool boolValue)
         {
             if (m_increment)
