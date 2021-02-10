@@ -47,6 +47,8 @@ namespace Quickstarts.ReferenceServer
 
             CertificateExpirationAlarmState alarm = GetAlarm();
 
+            alarm.ExpirationLimit = new PropertyState<double>(alarm);
+
             base.Initialize(parent, alarmTypeIdentifier, name, alarmConditionType, optional, maxTimeShelved);
 
             alarm.ExpirationLimit.Value = Defines.MILLISECONDS_PER_WEEK;

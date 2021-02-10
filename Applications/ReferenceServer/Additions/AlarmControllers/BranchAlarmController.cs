@@ -44,6 +44,10 @@ namespace Quickstarts.ReferenceServer
 
         }
 
+        protected override bool SupportsBranching()
+        {
+            return true;
+        }
 
     }
 }

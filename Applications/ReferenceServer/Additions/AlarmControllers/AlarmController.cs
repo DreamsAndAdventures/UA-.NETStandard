@@ -110,6 +110,10 @@ namespace Quickstarts.ReferenceServer
             TypicalGetValue(minValue, maxValue, ref intValue, ref boolValue);
         }
 
+        protected virtual bool SupportsBranching()
+        {
+            return false;
+        }
 
         protected void TypicalGetValue(int minValue, int maxValue, ref int intValue, ref bool boolValue)
         {

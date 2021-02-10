@@ -153,7 +153,7 @@ namespace Quickstarts.ReferenceServer
                     string optionalName = optionalMandatory[optionalIndex];
                     string optionalNodeName = manualAutoNodeName + "." + optionalName;
                     FolderState optionalFolder = Helpers.CreateFolder(manualAutoFolder, NameSpaceIndex, optionalNodeName, optionalName);
-                    bool useOptional = optionalIndex == 0;
+                    bool useOptional = optionalName == "Optional";
 
                     for (int conditionTypeIndex = 0; conditionTypeIndex < conditionTypes.Length; conditionTypeIndex++)
                     {
