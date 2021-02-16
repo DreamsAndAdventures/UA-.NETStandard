@@ -2777,6 +2777,154 @@ namespace Quickstarts.ReferenceServer
             AddPredefinedNode(SystemContext, nodeState);
         }
 
+        /// <summary>
+        /// Calls a method on the specified nodes.
+        /// </summary>
+        public override void Call(
+            OperationContext context,
+            IList<CallMethodRequest> methodsToCall,
+            IList<CallMethodResult> results,
+            IList<ServiceResult> errors)
+        {
+            ServerSystemContext systemContext = SystemContext.Copy(context);
+            IDictionary<NodeId, NodeState> operationCache = new NodeIdDictionary<NodeState>();
+
+            for (int ii = 0; ii < methodsToCall.Count; ii++)
+            {
+                CallMethodRequest methodToCall = methodsToCall[ii];
+
+                // skip items that have already been processed.
+                if (methodToCall.Processed)
+                {
+                    continue;
+                }
+
+                MethodState method = null;
+
+                lock (Lock)
+                {
+                    // check for valid handle.
+                    NodeHandle initialHandle = GetManagerHandle(systemContext, methodToCall.ObjectId, operationCache);
+
+                    if (initialHandle == null)
+                    {
+                        continue;
+                    }
+
+                    // owned by this node manager.
+                    methodToCall.Processed = true;
+
+                    // Look for an alarm branchId to operate on.
+                    NodeHandle handle = m_alarms.FindBranchNodeHandle(systemContext, initialHandle, methodToCall);
+
+                    // validate the source node.
+                    NodeState source = ValidateNode(systemContext, handle, operationCache);
+
+                    if (source == null)
+                    {
+                        errors[ii] = StatusCodes.BadNodeIdUnknown;
+                        continue;
+                    }
+
+                    // find the method.
+                    method = source.FindMethod(systemContext, methodToCall.MethodId);
+
+                    if (method == null)
+                    {
+                        // check for loose coupling.
+                        if (source.ReferenceExists(ReferenceTypeIds.HasComponent, false, methodToCall.MethodId))
+                        {
+                            method = (MethodState)FindPredefinedNode(methodToCall.MethodId, typeof(MethodState));
+                        }
+
+                        if (method == null)
+                        {
+                            errors[ii] = StatusCodes.BadMethodInvalid;
+                            continue;
+                        }
+                    }
+                }
+
+                // call the method.
+                CallMethodResult result = results[ii] = new CallMethodResult();
+
+                errors[ii] = Call(
+                    systemContext,
+                    methodToCall,
+                    method,
+                    result);
+            }
+        }
+
+
+        public override ServiceResult ConditionRefresh(
+            OperationContext context,
+            IList<IEventMonitoredItem> monitoredItems)
+        {
+            ServerSystemContext systemContext = SystemContext.Copy(context);
+
+            for (int ii = 0; ii < monitoredItems.Count; ii++)
+            {
+                // the IEventMonitoredItem should always be MonitoredItems since they are created by the MasterNodeManager.
+                MonitoredItem monitoredItem = monitoredItems[ii] as MonitoredItem;
+
+                if (monitoredItem == null)
+                {
+                    continue;
+                }
+
+                List<IFilterTarget> events = new List<IFilterTarget>();
+                List<NodeState> nodesToRefresh = new List<NodeState>();
+
+                lock (Lock)
+                {
+                    // check for server subscription.
+                    if (monitoredItem.NodeId == ObjectIds.Server)
+                    {
+                        if (RootNotifiers != null)
+                        {
+                            nodesToRefresh.AddRange(RootNotifiers);
+                        }
+                    }
+                    else
+                    {
+                        // check for existing monitored node.
+                        MonitoredNode2 monitoredNode = null;
+
+                        if (!MonitoredNodes.TryGetValue(monitoredItem.NodeId, out monitoredNode))
+                        {
+                            continue;
+                        }
+
+                        // get the refresh events.
+                        nodesToRefresh.Add(monitoredNode.Node);
+                    }
+                }
+
+                // block and wait for the refresh.
+                for (int jj = 0; jj < nodesToRefresh.Count; jj++)
+                {
+                    nodesToRefresh[jj].ConditionRefresh(systemContext, events, true);
+                }
+
+                lock (Lock)
+                {
+                    // This is where I can add branch events
+                    m_alarms.GetBranchesForConditionRefresh(events);
+                }
+
+                // queue the events.
+                for (int jj = 0; jj < events.Count; jj++)
+                {
+                    monitoredItem.QueueEvent(events[jj]);
+                }
+            }
+
+            // all done.
+            return ServiceResult.Good;
+        }
+
+
         #endregion
     }
 }

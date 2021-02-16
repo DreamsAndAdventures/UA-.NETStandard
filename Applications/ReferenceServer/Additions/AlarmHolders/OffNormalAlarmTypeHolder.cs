@@ -24,26 +24,23 @@ namespace Quickstarts.ReferenceServer
         {
             if (create)
             {
-                Initialize(parent, Opc.Ua.ObjectTypes.OffNormalAlarmType, name, alarmConditionType, optional, maxShelveTime);
+                Initialize(Opc.Ua.ObjectTypes.OffNormalAlarmType, name, maxShelveTime);
             }
         }
 
         public void Initialize(
-            FolderState parent,
             uint alarmTypeIdentifier,
             string name,
-            SupportedAlarmConditionType alarmConditionType,
-            bool optional = true,
             double maxTimeShelved = Defines.NORMAL_MAX_TIME_SHELVED)
         {
             if (m_alarm == null)
             {
-                m_alarm = new OffNormalAlarmState(parent);
+                m_alarm = new OffNormalAlarmState(m_parent);
             }
 
             OffNormalAlarmState alarm = GetAlarm();
 
-            base.Initialize(parent, alarmTypeIdentifier, name, alarmConditionType, optional, maxTimeShelved);
+            base.Initialize(alarmTypeIdentifier, name, maxTimeShelved);
 
             alarm.NormalState.Value = new NodeId();
         }

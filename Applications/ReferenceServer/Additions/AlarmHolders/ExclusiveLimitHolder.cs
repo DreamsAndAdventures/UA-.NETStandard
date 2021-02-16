@@ -24,23 +24,20 @@ namespace Quickstarts.ReferenceServer
         {
             if (create)
             {
-                Initialize(parent, Opc.Ua.ObjectTypes.ExclusiveLimitAlarmType, name, alarmConditionType, optional, maxShelveTime);
+                Initialize(Opc.Ua.ObjectTypes.ExclusiveLimitAlarmType, name, maxShelveTime);
             }
         }
 
         public void Initialize(
-            FolderState parent,
             uint alarmTypeIdentifier,
             string name,
-            SupportedAlarmConditionType alarmConditionType,
-            bool optional = true,
             double maxTimeShelved = Defines.NORMAL_MAX_TIME_SHELVED)
         {
             // Create an alarm and trigger name - Create a base method for creating the trigger, just provide the name
 
             if (m_alarm == null)
             {
-                m_alarm = new ExclusiveLimitAlarmState(parent);
+                m_alarm = new ExclusiveLimitAlarmState(m_parent);
             }
 
             ExclusiveLimitAlarmState alarm = GetAlarm();
@@ -49,7 +46,7 @@ namespace Quickstarts.ReferenceServer
 
 
             // Call the base class to set parameters
-            base.Initialize(parent, alarmTypeIdentifier, name, alarmConditionType, optional, maxTimeShelved);
+            base.Initialize(alarmTypeIdentifier, name, maxTimeShelved);
 
             alarm.SetLimitState(SystemContext, LimitAlarmStates.Inactive);
         }

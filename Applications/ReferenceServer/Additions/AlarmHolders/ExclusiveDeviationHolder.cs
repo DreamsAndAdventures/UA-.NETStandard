@@ -23,24 +23,21 @@ namespace Quickstarts.ReferenceServer
         {
             if (create)
             {
-                Initialize(parent, Opc.Ua.ObjectTypes.ExclusiveDeviationAlarmType, name, alarmConditionType, setpointNodeId, optional, maxShelveTime);
+                Initialize(Opc.Ua.ObjectTypes.ExclusiveDeviationAlarmType, name, setpointNodeId, maxShelveTime);
             }
         }
 
         public void Initialize(
-            FolderState parent,
             uint alarmTypeIdentifier,
             string name,
-            SupportedAlarmConditionType alarmConditionType,
             NodeId setpointNodeId,
-            bool optional = true,
             double maxTimeShelved = Defines.NORMAL_MAX_TIME_SHELVED)
         {
             // Create an alarm and trigger name - Create a base method for creating the trigger, just provide the name
 
             if (m_alarm == null)
             {
-                m_alarm = new ExclusiveDeviationAlarmState(parent);
+                m_alarm = new ExclusiveDeviationAlarmState(m_parent);
             }
 
             ExclusiveDeviationAlarmState alarm = (ExclusiveDeviationAlarmState)m_alarm;
@@ -51,7 +48,7 @@ namespace Quickstarts.ReferenceServer
             }
 
             // Call the base class to set parameters
-            base.Initialize(parent, alarmTypeIdentifier, name, alarmConditionType, optional, maxTimeShelved);
+            base.Initialize(alarmTypeIdentifier, name, maxTimeShelved, isLimit: false);
 
             alarm.SetpointNode.Value = new NodeId(setpointNodeId);
 

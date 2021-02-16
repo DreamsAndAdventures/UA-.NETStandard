@@ -26,16 +26,13 @@ namespace Quickstarts.ReferenceServer
         {
             if (create)
             {
-                Initialize(parent, Opc.Ua.ObjectTypes.LimitAlarmType, name, alarmConditionType, optional, maxShelveTime);
+                Initialize(Opc.Ua.ObjectTypes.LimitAlarmType, name, maxShelveTime);
             }
         }
 
         public void Initialize(
-            FolderState parent,
             uint alarmTypeIdentifier,
             string name,
-            SupportedAlarmConditionType alarmConditionType,
-            bool optional = true,
             double maxTimeShelved = Defines.NORMAL_MAX_TIME_SHELVED,
             bool isLimit = true )
         {
@@ -43,7 +40,7 @@ namespace Quickstarts.ReferenceServer
 
             if (m_alarm == null)
             {
-                m_alarm = new LimitAlarmState(parent);
+                m_alarm = new LimitAlarmState(m_parent);
             }
 
             m_isLimit = isLimit;
@@ -71,7 +68,7 @@ namespace Quickstarts.ReferenceServer
                 }
             }
 
-            if (optional)
+            if (Optional)
             {
                 alarm.BaseHighLimit = new PropertyState<double>(alarm);
                 if (!m_isLimit)
@@ -83,7 +80,7 @@ namespace Quickstarts.ReferenceServer
             }
 
             // Call the base class to set parameters
-            base.Initialize(parent, alarmTypeIdentifier, name, alarmConditionType, optional, maxTimeShelved);
+            base.Initialize(alarmTypeIdentifier, name, maxTimeShelved);
 
             alarm.HighLimit.Value = Defines.HIGH_ALARM;
 
@@ -94,7 +91,7 @@ namespace Quickstarts.ReferenceServer
                 alarm.LowLowLimit.Value = Defines.LOWLOW_ALARM;
             }
 
-            if (optional)
+            if (Optional)
             {
                 alarm.BaseHighLimit.Value = Defines.HIGH_ALARM;
 

@@ -6,6 +6,8 @@
 #define RUN_SYSTEMOFFNORMAL
 #define RUN_DERIVEDSYSTEMOFFNORMAL
 #define RUN_CERTIFICATE
+#define RUN_LIMIT
+#define RUN_LEVEL
 
 using System;
 using System.Collections.Generic;
@@ -25,6 +27,7 @@ namespace Quickstarts.ReferenceServer
         private ReferenceNodeManager m_nodeManager;
         private ushort NameSpaceIndex = 0;
         Dictionary<string, AlarmHolder> m_alarms = new Dictionary<string, AlarmHolder>();
+        Dictionary<string, BaseEventState> m_branches = new Dictionary<string, BaseEventState>();
         CertificateExpirationTypeHolder m_expired = null;
         CertificateExpirationTypeHolder m_inside = null;
         CertificateExpirationTypeHolder m_outside = null;
@@ -134,7 +137,7 @@ namespace Quickstarts.ReferenceServer
                 optional: false);
             m_alarms.Add(m_outside.MapName, m_outside);
 
-#endif 
+#endif
 
             // string[] manualAuto = { /*"Manual",*/ "Auto" };
             string[] manualAuto = { "Manual", "Auto" };
@@ -297,6 +300,17 @@ namespace Quickstarts.ReferenceServer
                                 optional: useOptional);
                             m_alarms.Add(alarmConditionWhileInactive.MapName, alarmConditionWhileInactive);
 
+                            AlarmHolder branching = new AlarmConditionTypeHolder(
+                                this,
+                                alarmConditionFolder,
+                                "Branch." + intervalString,
+                                conditionType,
+                                Type.GetType("Quickstarts.ReferenceServer.BranchAlarmController"),
+                                interval,
+                                optional: useOptional); ;
+                            m_alarms.Add(branching.MapName, branching);
+
+
 #endif
 
 #if RUN_DISCRETE
@@ -351,6 +365,9 @@ namespace Quickstarts.ReferenceServer
                             m_alarms.Add(derived.MapName, derived);
 #endif
 
+
+#if RUN_LIMIT
+
                             AlarmHolder limit = new LimitAlarmTypeHolder(
                                 this,
                                 limitFolder,
@@ -381,6 +398,10 @@ namespace Quickstarts.ReferenceServer
                                 interval,
                                 optional: useOptional);
                             m_alarms.Add(nonExclusiveLimit.MapName, nonExclusiveLimit);
+#endif
+
+
+#if Run_LEVEL
 
                             AlarmHolder exclusiveLevel = new ExclusiveLevelHolder(
                                 this,
@@ -445,6 +466,7 @@ namespace Quickstarts.ReferenceServer
                                 deviationSetpoint.NodeId,
                                 optional: useOptional);
                             m_alarms.Add(nonExclusiveDeviation.MapName, nonExclusiveDeviation);
+#endif
 
 
 
@@ -457,6 +479,102 @@ namespace Quickstarts.ReferenceServer
             m_allowEntry = true;
 
         }
+
+        public NodeState GetAlarmNodeState( NodeHandle handle )
+        {
+            NodeState alarmState = null;
+
+            NodeId handleNodeId = handle.NodeId;
+            if ( handleNodeId.IdType == IdType.String )
+            {
+                string nodeString = (string)handleNodeId.Identifier;
+                //if ( m_alarms.Contains( nodeString ) )
+                //{
+                //    AlarmHolder holder = m_alarms[nodeString];
+                //    if ( controller.HasBranches() )
+                //    {
+                //        BaseEventState ackState = holder.Alarm;
+                //        ackState.EventId.Value 
+                //        ackState.BranchId
+                //        alarmState = 
+
+                //    }
+                // }
+            }
+
+            return alarmState;
+        }
+
+        public NodeHandle FindBranchNodeHandle(ISystemContext systemContext, NodeHandle initialHandle, CallMethodRequest methodToCall)
+        {
+            NodeHandle nodeHandle = initialHandle;
+
+            if ( IsAckConfirm( methodToCall.MethodId ) )
+            {
+                AlarmHolder holder = GetAlarmHolder(methodToCall.ObjectId);
+
+                if ( holder != null )
+                {
+                    if ( holder.HasBranches() )
+                    {
+                        byte[] eventId = GetEventIdFromAckConfirmMethod(methodToCall);
+
+                        if ( eventId != null )
+                        {
+                            BaseEventState state = holder.GetBranch(eventId);
+
+                            if ( state != null )
+                            {
+                                nodeHandle = new NodeHandle();
+
+                                nodeHandle.NodeId = methodToCall.ObjectId;
+                                nodeHandle.Node = state;
+                                nodeHandle.Validated = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return nodeHandle;
+        }
+
+        private bool IsAckConfirm( NodeId methodId )
+        {
+            bool isAckConfirm = false;
+            if ( methodId.Equals( Opc.Ua.MethodIds.AcknowledgeableConditionType_Acknowledge ) ||
+                 methodId.Equals(Opc.Ua.MethodIds.AcknowledgeableConditionType_Confirm))
+            {
+                isAckConfirm = true;
+
+            }
+            return isAckConfirm;
+        }
+
+        private byte[] GetEventIdFromAckConfirmMethod( CallMethodRequest request)
+        {
+            byte[] eventId = null;
+
+            // Bad magic Numbers here
+            if ( request.InputArguments != null && request.InputArguments.Count == 2 )
+            {
+                if ( request.InputArguments[0].TypeInfo.BuiltInType.Equals( BuiltInType.ByteString ) )
+                {
+                    eventId = (byte[])request.InputArguments[0].Value;
+                }
+            }
+            return eventId;
+        }
+
+        public void GetBranchesForConditionRefresh(List<IFilterTarget> events)
+        {
+            // Don't look at Certificates, they won't have branches
+            foreach( AlarmHolder alarmHolder in m_alarms.Values )
+            {
+                alarmHolder.GetBranchesForConditionRefresh(events);
+            }
+        }
+
 
         private int m_missed = 0;
         private int m_success = 0;
@@ -672,13 +790,24 @@ namespace Quickstarts.ReferenceServer
 
         private AlarmHolder GetAlarmHolder( NodeId node )
         {
+
             AlarmHolder alarmHolder = null;
 
             Type nodeIdType = node.Identifier.GetType();
             if (nodeIdType.Name == "String")
             {
-                string triggerName = node.Identifier.ToString();
-                string mapName = triggerName.Replace(".Trigger", "");
+                string unmodifiedName = node.Identifier.ToString();
+
+                // This is bad, but I'm not sure why the NodeName is being attached with an underscore, it messes with this lookup.
+                string name = unmodifiedName.Replace("Alarms_", "Alarms.");
+
+                string mapName = name;
+                if ( name.EndsWith(Defines.TRIGGER_EXTENSION ) || name.EndsWith( Defines.ALARM_EXTENSION ) )
+                {
+                    int lastDot = name.LastIndexOf(".");
+                    mapName = name.Substring(0, lastDot);
+                }
+                
                 if (m_alarms.ContainsKey(mapName))
                 {
                     alarmHolder = m_alarms[mapName];

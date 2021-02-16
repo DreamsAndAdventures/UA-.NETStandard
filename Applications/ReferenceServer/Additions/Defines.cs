@@ -54,6 +54,9 @@ namespace Quickstarts.ReferenceServer
         public const string INSIDE_LIMIT_NAME = "InsideLimit";
         public const string EXPIRED_LIMIT_NAME = "ExpiredLimit";
 
+        public const string TRIGGER_EXTENSION = ".Trigger";
+        public const string ALARM_EXTENSION = ".Alarm";
+
 
     }
 }

@@ -25,48 +25,35 @@ namespace Quickstarts.ReferenceServer
         {
             if (create)
             {
-                Initialize(parent, Opc.Ua.ObjectTypes.AlarmConditionType, name, alarmConditionType, optional, maxShelveTime);
+                Initialize(Opc.Ua.ObjectTypes.AlarmConditionType, name, maxShelveTime);
             }
         }
 
         public void Initialize(
-            FolderState parent,
             uint alarmTypeIdentifier,
             string name,
-            SupportedAlarmConditionType alarmConditionType,
-            bool optional = true,
             double maxTimeShelved = Defines.NORMAL_MAX_TIME_SHELVED)
         {
             // Create an alarm and trigger name - Create a base method for creating the trigger, just provide the name
 
             if (m_alarm == null)
             {
-                m_alarm = new AlarmConditionState(parent);
+                m_alarm = new AlarmConditionState(m_parent);
             }
 
             AlarmConditionState alarm = GetAlarm();
 
-            if (optional)
+            if (Optional)
             {
                 if (alarm.SuppressedState == null)
                 {
                     alarm.SuppressedState = new TwoStateVariableState(alarm);
-                    //alarm.SuppressedState.Create(SystemContext,
-                    //    null,
-                    //    BrowseNames.SuppressedState,
-                    //    BrowseNames.SuppressedState,
-                    //    false);
                 }
 
 
                 if (alarm.OutOfServiceState == null)
                 {
                     alarm.OutOfServiceState = new TwoStateVariableState(alarm);
-                    alarm.OutOfServiceState.Create(SystemContext,
-                        null,
-                        BrowseNames.OutOfServiceState,
-                        BrowseNames.OutOfServiceState,
-                        false);
                 }
 
                 if (alarm.ShelvingState == null)
@@ -88,13 +75,12 @@ namespace Quickstarts.ReferenceServer
 
 
             // Call the base class to set parameters
-            base.Initialize(parent, alarmTypeIdentifier, name, alarmConditionType, optional);
+            base.Initialize(alarmTypeIdentifier, name);
 
             alarm.SetActiveState(SystemContext, active: false);
             alarm.InputNode.Value = new NodeId(m_trigger.NodeId);
 
-
-            if (optional)
+            if (Optional)
             {
                 // This should not be working
                 alarm.SetSuppressedState(SystemContext, suppressed: false);
@@ -107,6 +93,74 @@ namespace Quickstarts.ReferenceServer
                 alarm.MaxTimeShelved.Value = maxTimeShelved;
             }
         }
+
+        public override BaseEventState CreateBranch(BaseEventState branch, NodeId branchId)
+        {
+            if (branch == null)
+            {
+                // this is invalid
+                branch = new AlarmConditionState(m_parent);
+            }
+
+            AlarmConditionState branchEvent = GetAlarm(branch);
+            InitializeInternal(branchEvent);
+
+            base.CreateBranch(branch, branchId);
+
+            branchEvent.SetActiveState(SystemContext, active: true);
+
+            AlarmConditionState alarm = GetAlarm();
+            alarm.InputNode.Value = new NodeId(m_trigger.NodeId);
+
+            if (Optional)
+            {
+                branchEvent.SetSuppressedState(SystemContext, alarm.SuppressedState.Id.Value);
+                // This needs more work.
+                branchEvent.SetShelvingState(SystemContext, shelved: false, oneShot: false, shelvingTime: Double.MaxValue);
+
+                branchEvent.OnShelve = OnShelve;
+                branchEvent.OnTimedUnshelve = OnTimedUnshelve;
+                branchEvent.UnshelveTimeUpdateRate = 2000;
+
+                branchEvent.MaxTimeShelved.Value = alarm.MaxTimeShelved.Value;
+            }
+            return branchEvent;
+        }
+
+        public void InitializeInternal( AlarmConditionState alarm )
+        {
+            // Create an alarm and trigger name - Create a base method for creating the trigger, just provide the name
+
+            if (Optional)
+            {
+                if (alarm.SuppressedState == null)
+                {
+                    alarm.SuppressedState = new TwoStateVariableState(alarm);
+                }
+
+
+                if (alarm.OutOfServiceState == null)
+                {
+                    alarm.OutOfServiceState = new TwoStateVariableState(alarm);
+                }
+
+                if (alarm.ShelvingState == null)
+                {
+                    alarm.ShelvingState = new ShelvedStateMachineState(alarm);
+                    alarm.ShelvingState.Create(SystemContext,
+                        null,
+                        BrowseNames.ShelvingState,
+                        BrowseNames.ShelvingState,
+                        false);
+                }
+                if (alarm.MaxTimeShelved == null)
+                {
+                    // Off normal does not create MaxTimeShelved.
+                    alarm.MaxTimeShelved = new PropertyState<double>(alarm);
+                }
+            }
+        }
+
 
         #region Overrides
 
@@ -157,6 +211,12 @@ namespace Quickstarts.ReferenceServer
             }
 
             return retainState;
+        }
+
+        protected override void SetActive(BaseEventState baseEvent, bool activeState)
+        {
+            AlarmConditionState alarm = GetAlarm(baseEvent);
+            alarm.SetActiveState(SystemContext, activeState);
         }
 
         protected override bool UpdateShelving()
@@ -217,10 +277,15 @@ namespace Quickstarts.ReferenceServer
 
         #region Helpers
 
-        private AlarmConditionState GetAlarm()
+        private AlarmConditionState GetAlarm(BaseEventState alarm = null)
         {
-            return (AlarmConditionState)m_alarm;
+            if (alarm == null)
+            {
+                alarm = m_alarm;
+            }
+            return (AlarmConditionState)alarm;
         }
+
 
         #endregion
 

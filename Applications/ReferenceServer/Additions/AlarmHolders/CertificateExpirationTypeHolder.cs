@@ -28,28 +28,26 @@ namespace Quickstarts.ReferenceServer
 
             if (create)
             {
-                Initialize(parent, Opc.Ua.ObjectTypes.CertificateExpirationAlarmType, name, alarmConditionType, optional, maxShelveTime);
+                Initialize(Opc.Ua.ObjectTypes.CertificateExpirationAlarmType, name, maxShelveTime);
             }
         }
 
         public void Initialize(
-            FolderState parent,
             uint alarmTypeIdentifier,
             string name,
-            SupportedAlarmConditionType alarmConditionType,
-            bool optional = true,
             double maxTimeShelved = Defines.NORMAL_MAX_TIME_SHELVED)
         {
             if (m_alarm == null)
             {
-                m_alarm = new CertificateExpirationAlarmState(parent);
+                m_alarm = new CertificateExpirationAlarmState(m_parent);
             }
 
             CertificateExpirationAlarmState alarm = GetAlarm();
 
+            // Not Set up for non optional
             alarm.ExpirationLimit = new PropertyState<double>(alarm);
 
-            base.Initialize(parent, alarmTypeIdentifier, name, alarmConditionType, optional, maxTimeShelved);
+            base.Initialize(alarmTypeIdentifier, name, maxTimeShelved);
 
             alarm.ExpirationLimit.Value = Defines.MILLISECONDS_PER_WEEK;
             alarm.Certificate.Value = new byte[1];

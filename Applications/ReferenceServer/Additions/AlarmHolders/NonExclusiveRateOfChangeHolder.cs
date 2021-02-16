@@ -22,23 +22,20 @@ namespace Quickstarts.ReferenceServer
         {
             if (create)
             {
-                Initialize(parent, Opc.Ua.ObjectTypes.NonExclusiveRateOfChangeAlarmType, name, alarmConditionType, optional, maxShelveTime);
+                Initialize(Opc.Ua.ObjectTypes.NonExclusiveRateOfChangeAlarmType, name, maxShelveTime);
             }
         }
 
         public void Initialize(
-            FolderState parent,
             uint alarmTypeIdentifier,
             string name,
-            SupportedAlarmConditionType alarmConditionType,
-            bool optional = true,
             double maxTimeShelved = Defines.NORMAL_MAX_TIME_SHELVED)
         {
             // Create an alarm and trigger name - Create a base method for creating the trigger, just provide the name
 
             if (m_alarm == null)
             {
-                m_alarm = new NonExclusiveRateOfChangeAlarmState(parent);
+                m_alarm = new NonExclusiveRateOfChangeAlarmState(m_parent);
             }
 
             NonExclusiveRateOfChangeAlarmState alarm = (NonExclusiveRateOfChangeAlarmState)m_alarm;
@@ -49,7 +46,7 @@ namespace Quickstarts.ReferenceServer
             }
 
             // Call the base class to set parameters
-            base.Initialize(parent, alarmTypeIdentifier, name, alarmConditionType, optional, maxTimeShelved);
+            base.Initialize(alarmTypeIdentifier, name, maxTimeShelved, isLimit: false);
 
             if (Optional)
             {

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+
 using System.Diagnostics;
 
 using System.Linq;
@@ -11,7 +12,6 @@ namespace Quickstarts.ReferenceServer
 {
     public class ConditionTypeHolder : BaseEventTypeHolder
     {
-        private bool m_useBranching = false;
 
         protected ConditionTypeHolder(
             Alarms alarms,
@@ -23,58 +23,137 @@ namespace Quickstarts.ReferenceServer
             bool optional) :
             base( alarms, parent, name, alarmConditionType, controllerType, interval, optional )
         {
-            if (controllerType.Name.Contains("BranchAlarmController"))
-            {
-                m_useBranching = true;
-            }
+            m_alarmConditionType = alarmConditionType;
         }
 
-        public void Initialize(
-            FolderState parent,
+        protected void Initialize(
             uint alarmTypeIdentifier,
-            string name,
-            SupportedAlarmConditionType alarmConditionType,
-            bool optional = true)
+            string name)
         {
             if ( m_alarm == null )
             {
                 // this is invalid
-                m_alarm = new ConditionState(parent);
+                m_alarm = new ConditionState(m_parent);
             }
 
             ConditionState alarm = GetAlarm();
 
             // Call the base class to set parameters
-            base.Initialize(parent, alarmTypeIdentifier, name, alarmConditionType, optional);
-
-            ReferenceNodeManager manager = GetNodeManager();
+            base.Initialize(alarmTypeIdentifier, name);
 
             // Set all ConditionType Parameters
             alarm.ClientUserId.Value = "Anonymous";
-            alarm.ConditionClassId.Value = alarmConditionType.Node;
-            alarm.ConditionClassName.Value = new LocalizedText("", alarmConditionType.ConditionName);
+            alarm.ConditionClassId.Value = m_alarmConditionType.Node;
+            alarm.ConditionClassName.Value = new LocalizedText("", m_alarmConditionType.ConditionName);
             alarm.ConditionName.Value = m_alarmRootName;
+            Debug.WriteLine("Alarm ConditionName = " + alarm.ConditionName.Value);
+
             alarm.BranchId.Value = new NodeId();
             alarm.Retain.Value = false;
 
-            alarm.SetEnableState(manager.SystemContext, true);
+            alarm.SetEnableState(SystemContext, true);
             alarm.Quality.Value = Opc.Ua.StatusCodes.Good;
             alarm.LastSeverity.Value = 0;
             alarm.Comment.Value = new LocalizedText("en", "");
-            // check validity of ClientUserId
 
             // Set Method Handlers
             alarm.OnEnableDisable = OnEnableDisableAlarm;
             alarm.OnAddComment = OnAddComment;
 
-            if (optional)
+            if (Optional)
             {
                 //alarm.ConditionSubClassId.Value = new List<NodeId>().ToArray();
                 //alarm.ConditionSubClassName.Value = new List<LocalizedText>().ToArray();
             }
-
-           
         }
+
+
+        public BaseEventState FindBranch( )
+        {
+            BaseEventState state = null;
+
+            return state;
+        }
+
+        protected override void CreateBranch()
+        {
+            ConditionState empty = null;
+
+            if (m_alarmController.SupportBranch())
+            {
+                ConditionState alarm = GetAlarm();
+                int currentSeverity = alarm.Severity.Value;
+                int newSeverity = GetSeverity();
+                // A branch is created at the end of an active cycle
+                // This could be a transition between alarm states,
+                // or a transition to inactive
+                // So a branch can only be created when the severity changes
+                if (currentSeverity > Defines.INACTIVE_SEVERITY &&
+                    newSeverity != currentSeverity)
+                {
+                    NodeId branchId = GetNewBranchId();
+                    ConditionState branch = (ConditionState)CreateBranch((BaseEventState)empty, branchId);
+                    if ( branch != null )
+                    {
+                        // Report the event.  Then grab the event id!
+                        ReportEvent( branch );
+                        string postEventId = Utils.ToHexString(branch.EventId.Value as byte[]);
+
+                        lock (GetNodeManager().Lock)
+                        {
+                            m_branches.Add(postEventId, branch);
+                            m_alarmController.SetBranchCount(m_branches.Count);
+                        }
+                    }
+                }
+            }
+        }
+
+        public override BaseEventState CreateBranch(BaseEventState branch, NodeId branchId)
+        {
+            if (branch == null)
+            {
+                // this is invalid
+                branch = new ConditionState(m_parent);
+            }
+
+            BaseEventState baseBranchEvent = base.CreateBranch(branch, branchId);
+
+            ConditionState branchEvent = GetAlarm(baseBranchEvent);
+            ConditionState alarm = GetAlarm();
+
+            // Set all ConditionType Parameters
+            branchEvent.ClientUserId.Value = String.Copy(alarm.ClientUserId.Value);
+            branchEvent.ConditionClassId.Value = new NodeId(alarm.ConditionClassId.Value);
+            branchEvent.ConditionClassName.Value = new LocalizedText(alarm.ConditionClassName.Value);
+            branchEvent.ConditionName.Value = String.Copy(alarm.ConditionName.Value);
+            Debug.WriteLine("Branch conditionName = " + branchEvent.ConditionName.Value);
+            branchEvent.BranchId.Value = branchId;
+            // Message part of BaseAlarmState - adding here to deal with branch
+            branchEvent.Message.Value = "Branch  " + branchEvent.BranchId.Value.ToString() + " Created, new Value = " + m_alarmController.GetValue().ToString();
+            Debug.WriteLine(branchEvent.Message.Value);
+            branchEvent.Retain.Value = alarm.Retain.Value;
+
+            branchEvent.SetEnableState(SystemContext, alarm.EnabledState.Id.Value);
+            branchEvent.Quality.Value = alarm.Quality.Value;
+            branchEvent.LastSeverity.Value = alarm.LastSeverity.Value;
+            branchEvent.Comment.Value = new LocalizedText(alarm.Comment.Value);
+
+            // Set Method Handlers
+            branchEvent.OnEnableDisable = OnEnableDisableAlarm;
+            branchEvent.OnAddComment = OnAddComment;
+
+            if (Optional)
+            {
+                //branchEvent.ConditionSubClassId.Value = alarm.ConditionSubClassId.Value.ToArray();
+                //branchEvent.ConditionSubClassName.Value = alarm.ConditionSubClassName.Value.ToArray();
+            }
+
+            return branchEvent;
+        }
+
+
+
 
         #region Overrides
 
@@ -82,9 +161,13 @@ namespace Quickstarts.ReferenceServer
         {
             ConditionState alarm = GetAlarm();
 
-            if (ShouldEvent() || valueUpdated || message.Length > 0 )
+            if (ShouldEvent() || valueUpdated || message.Length > 0)
             {
-                alarm.SetSeverity(SystemContext, (EventSeverity)GetSeverity());
+                CreateBranch();
+
+                int newSeverity = GetSeverity();
+
+                alarm.SetSeverity(SystemContext, (EventSeverity)newSeverity);
                 if (message.Length == 0)
                 {
                     message = "Alarm Event Value = " + m_trigger.Value.ToString();
@@ -96,13 +179,31 @@ namespace Quickstarts.ReferenceServer
             }
         }
 
+        //public override string GetBranchNodeIdString(BaseEventState baseEvent)
+        //{
+        //    string nodeIdString = "";
+
+        //    ConditionState alarm = GetAlarm(baseEvent);
+        //    if ( alarm.BranchId != null && alarm.BranchId.Value != null &&  !alarm.BranchId.Value.IsNullNodeId )
+        //    {
+        //        nodeIdString = alarm.BranchId.Value.ToString();
+        //    }
+
+        //    return nodeIdString;
+        //}
+
+
         #endregion
 
         #region Child Helpers
 
-        public void ReportEvent( )
+        public void ReportEvent(ConditionState alarm = null)
         {
-            ConditionState alarm = GetAlarm();
+            if ( alarm == null )
+            {
+                alarm = GetAlarm();
+            }
+
             if (alarm.EnabledState.Id.Value)
             {
                 alarm.EventId.Value = Guid.NewGuid().ToByteArray();
@@ -113,7 +214,7 @@ namespace Quickstarts.ReferenceServer
 
                 InstanceStateSnapshot eventSnapshot = new InstanceStateSnapshot();
                 eventSnapshot.Initialize(SystemContext, alarm);
-                Alarm.ReportEvent(SystemContext, eventSnapshot);
+                alarm.ReportEvent(SystemContext, eventSnapshot);
             }
         }
 
@@ -193,10 +294,15 @@ namespace Quickstarts.ReferenceServer
 
         #region Helpers
 
-        private ConditionState GetAlarm()
+        private ConditionState GetAlarm(BaseEventState alarm = null)
         {
-            return (ConditionState)m_alarm;
+            if (alarm == null)
+            {
+                alarm = m_alarm;
+            }
+            return (ConditionState)alarm;
         }
+
 
         #endregion
 

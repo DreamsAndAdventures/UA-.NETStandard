@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -44,9 +45,14 @@ namespace Quickstarts.ReferenceServer
 
         }
 
-        protected override bool SupportsBranching()
+        public override bool SupportBranch( )
         {
             return true;
+        }
+
+        public override void SetBranchCount(int count)
+        {
+            m_branchCount = count;
         }
 
     }

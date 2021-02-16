@@ -17,24 +17,23 @@ namespace Quickstarts.ReferenceServer
             Type controllerType,
             int interval,
             bool optional) :
-            base(alarms, controllerType, interval)
+            base(alarms, parent, controllerType, interval)
         {
             m_optional = optional;
         }
 
         protected void Initialize(
-            FolderState parent,
             uint alarmTypeIdentifier,
-            string name,
-            SupportedAlarmConditionType alarmConditionType,
-            bool optional = true)
+            string name)
         {
+            m_alarmTypeIdentifier = alarmTypeIdentifier;
+
             if (m_alarm != null)
             {
                 // Call the base class to set parameters
-                base.Initialize(parent, GetAlarmTypeName( alarmTypeIdentifier), name);
+                base.Initialize(alarmTypeIdentifier, name);
 
-                BaseEventState alarm = (BaseEventState)m_alarm;
+                BaseEventState alarm = GetAlarm();
 
                 alarm.EventId.Value = Guid.NewGuid().ToByteArray();
                 alarm.EventType.Value = new NodeId( alarmTypeIdentifier, GetNameSpaceIndex( alarmTypeIdentifier ) );
@@ -45,6 +44,25 @@ namespace Quickstarts.ReferenceServer
                 alarm.Message.Value = name + " Initialized";
                 alarm.Severity.Value = 0;
             }
+        }
+
+        public override BaseEventState CreateBranch(BaseEventState branch, NodeId branchId)
+        {
+            BaseEventState branchEvent = base.CreateBranch(branch, branchId);
+
+            BaseEventState alarm = GetAlarm();
+
+            branchEvent.EventId.Value = Guid.NewGuid().ToByteArray();
+            branchEvent.EventType.Value = new NodeId(alarm.EventType.Value);
+            branchEvent.SourceNode.Value = m_trigger.NodeId;
+            branchEvent.SourceName.Value = m_trigger.SymbolicName;
+            branchEvent.Time.Value = DateTime.UtcNow;
+            branchEvent.ReceiveTime.Value = alarm.Time.Value;
+            // Do the Message in the ConditionType, as it has the branchId
+            //branchEvent.Message.Value = MapName + " Branch  " + branchEvent.Br.ToString() + " Created";
+            branchEvent.Severity.Value = alarm.Severity.Value;
+
+            return branchEvent;
         }
 
         #region Overrides
@@ -58,130 +76,15 @@ namespace Quickstarts.ReferenceServer
 
         #region Helpers
 
-        private BaseEventState GetAlarm()
+        private BaseEventState GetAlarm(BaseEventState alarm = null)
         {
-            return (BaseEventState)m_alarm;
-        }
-
-        protected string GetAlarmTypeName(UInt32 alarmTypeIdentifier)
-        {
-            string alarmTypeName = "";
-
-            switch (alarmTypeIdentifier)
+            if ( alarm == null )
             {
-                case Opc.Ua.ObjectTypes.ConditionType:
-                    alarmTypeName = "ConditionType";
-                    break;
-
-                case Opc.Ua.ObjectTypes.DialogConditionType:
-                    alarmTypeName = "DialogConditionType";
-                    break;
-
-                case Opc.Ua.ObjectTypes.AcknowledgeableConditionType:
-                    alarmTypeName = "AcknowledgeableConditionType";
-                    break;
-
-                case Opc.Ua.ObjectTypes.AlarmConditionType:
-                    alarmTypeName = "AlarmConditionType";
-                    break;
-
-                case Opc.Ua.ObjectTypes.AlarmGroupType:
-                    alarmTypeName = "AlarmGroupType";
-                    break;
-
-                case Opc.Ua.ObjectTypes.ShelvedStateMachineType:
-                    alarmTypeName = "ShelvedStateMachineType";
-                    break;
-
-                case Opc.Ua.ObjectTypes.LimitAlarmType:
-                    alarmTypeName = "LimitAlarmType";
-                    break;
-
-                case Opc.Ua.ObjectTypes.ExclusiveLimitStateMachineType:
-                    alarmTypeName = "ExclusiveLimitStateMachineType";
-                    break;
-
-                case Opc.Ua.ObjectTypes.ExclusiveLimitAlarmType:
-                    alarmTypeName = "ExclusiveLimitAlarmType";
-                    break;
-
-                case Opc.Ua.ObjectTypes.NonExclusiveLimitAlarmType:
-                    alarmTypeName = "NonExclusiveLimitAlarmType";
-                    break;
-
-                case Opc.Ua.ObjectTypes.NonExclusiveLevelAlarmType:
-                    alarmTypeName = "NonExclusiveLevelAlarmType";
-                    break;
-
-                case Opc.Ua.ObjectTypes.ExclusiveLevelAlarmType:
-                    alarmTypeName = "ExclusiveLevelAlarmType";
-                    break;
-
-                case Opc.Ua.ObjectTypes.NonExclusiveDeviationAlarmType:
-                    alarmTypeName = "NonExclusiveDeviationAlarmType";
-                    break;
-
-                case Opc.Ua.ObjectTypes.NonExclusiveRateOfChangeAlarmType:
-                    alarmTypeName = "NonExclusiveRateOfChangeAlarmType";
-                    break;
-
-                case Opc.Ua.ObjectTypes.ExclusiveDeviationAlarmType:
-                    alarmTypeName = "ExclusiveDeviationAlarmType";
-                    break;
-
-                case Opc.Ua.ObjectTypes.ExclusiveRateOfChangeAlarmType:
-                    alarmTypeName = "ExclusiveRateOfChangeAlarmType";
-                    break;
-
-                case Opc.Ua.ObjectTypes.DiscreteAlarmType:
-                    alarmTypeName = "DiscreteAlarmType";
-                    break;
-
-                case Opc.Ua.ObjectTypes.OffNormalAlarmType:
-                    alarmTypeName = "OffNormalAlarmType";
-                    break;
-
-                case Opc.Ua.ObjectTypes.SystemOffNormalAlarmType:
-                    alarmTypeName = "SystemOffNormalAlarmType";
-                    break;
-
-                case Opc.Ua.ObjectTypes.TripAlarmType:
-                    alarmTypeName = "TripAlarmType";
-                    break;
-
-                case Opc.Ua.ObjectTypes.InstrumentDiagnosticAlarmType:
-                    alarmTypeName = "InstrumentDiagnosticAlarmType";
-                    break;
-
-                case Opc.Ua.ObjectTypes.SystemDiagnosticAlarmType:
-                    alarmTypeName = "SystemDiagnosticAlarmType";
-                    break;
-
-                case Opc.Ua.ObjectTypes.CertificateExpirationAlarmType:
-                    alarmTypeName = "CertificateExpirationAlarmType";
-                    break;
-
-                case Opc.Ua.ObjectTypes.DiscrepancyAlarmType:
-                    alarmTypeName = "DiscrepancyAlarmType";
-                    break;
+                alarm = m_alarm;
             }
-
-            return alarmTypeName;
+            return (BaseEventState)alarm;
         }
 
-        protected ushort GetNameSpaceIndex( UInt32 alarmTypeIdentifier )
-        {
-            ushort nameSpaceIndex = 0;
-               
-            switch ( alarmTypeIdentifier )
-            {
-                case Defines.DERIVED_SYSTEM_OFF_NORMAL_ALARM_TYPE:
-                    nameSpaceIndex = m_alarms.GetNodeManager().NamespaceIndex;
-                    break;
-            }
-
-            return nameSpaceIndex;
-        }
 
         #endregion
 
@@ -189,7 +92,36 @@ namespace Quickstarts.ReferenceServer
 
         protected bool IsEvent( byte[] eventId )
         {
-            return GetAlarm().EventId.Value.SequenceEqual(eventId);
+            bool isEvent = false;
+            if (GetAlarm().EventId.Value.SequenceEqual(eventId) )
+            {
+                isEvent = true;
+            }
+
+            return isEvent;
+        }
+
+        protected BaseEventState GetEventByEventId(byte[] eventId)
+        {
+            BaseEventState alarm = null;
+
+            BaseEventState originalAlarm = GetAlarm();
+            if ( originalAlarm.EventId.Value.SequenceEqual(eventId))
+            {
+                alarm = originalAlarm;
+            }
+            else
+            {
+                foreach( BaseEventState branchEvent in m_branches.Values )
+                {
+                    if (branchEvent.EventId.Value.SequenceEqual(eventId))
+                    {
+                        alarm = branchEvent;
+                        break;
+                    }
+                }
+            }
+            return alarm;
         }
 
         #endregion

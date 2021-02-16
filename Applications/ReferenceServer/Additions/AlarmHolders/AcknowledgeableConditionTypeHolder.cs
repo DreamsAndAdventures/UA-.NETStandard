@@ -26,55 +26,80 @@ namespace Quickstarts.ReferenceServer
         {
             if (create)
             {
-                Initialize(parent, Opc.Ua.ObjectTypes.AcknowledgeableConditionType, name, alarmConditionType, optional);
+                Initialize(Opc.Ua.ObjectTypes.AcknowledgeableConditionType, name);
             }
         }
 
-        public void Initialize(
-            FolderState parent,
+        protected void Initialize(
             uint alarmTypeIdentifier,
-            string name,
-            SupportedAlarmConditionType alarmConditionType,
-            bool optional = true)
+            string name)
         {
             // Create an alarm and trigger name - Create a base method for creating the trigger, just provide the name
             
             if (m_alarm == null)
             {
-                m_alarm = new AcknowledgeableConditionState(parent);
+                m_alarm = new AcknowledgeableConditionState(m_parent);
             }
 
             AcknowledgeableConditionState alarm = GetAlarm();
-            alarm.OnAcknowledge = OnAcknowledge;
-
-            // Create any optional 
-            if ( optional )
-            {
-                if (alarm.ConfirmedState == null)
-                {
-                    alarm.ConfirmedState = new TwoStateVariableState(alarm);
-                    alarm.ConfirmedState.Create(SystemContext,
-                        null,
-                        BrowseNames.ConfirmedState,
-                        BrowseNames.ConfirmedState,
-                        false);
-                }
-                alarm.Confirm = new AddCommentMethodState(alarm);
-            }
+            InitializeInternal(alarm);
 
             // Call the base class to set parameters
-            base.Initialize(parent, alarmTypeIdentifier, name, alarmConditionType, optional );
+            base.Initialize(alarmTypeIdentifier, name);
 
-            // Set all AcknowledgeableConditionState Parameters
             alarm.SetAcknowledgedState(SystemContext, acknowledged: true);
-            if (optional)
+            if (Optional)
             {
                 alarm.SetConfirmedState(SystemContext, confirmed: true);
                 alarm.OnConfirm = OnConfirm;
             }
+
             alarm.Retain.Value = GetRetainState();
             alarm.AutoReportStateChanges = true;
         }
+
+        public override BaseEventState CreateBranch(BaseEventState branch, NodeId branchId)
+        {
+            if (branch == null)
+            {
+                branch = new AcknowledgeableConditionState(m_parent);
+            }
+
+            AcknowledgeableConditionState branchEvent = GetAlarm(branch);
+            InitializeInternal(branchEvent);
+            base.CreateBranch(branch, branchId);
+
+            AcknowledgeableConditionState alarm = GetAlarm();
+
+            branchEvent.SetAcknowledgedState(SystemContext, alarm.AckedState.Id.Value);
+            if (Optional)
+            {
+                branchEvent.SetConfirmedState(SystemContext, alarm.ConfirmedState.Id.Value);
+                branchEvent.OnConfirm = OnConfirm;
+            }
+
+            branchEvent.Retain.Value = GetRetainState();
+            branchEvent.AutoReportStateChanges = false;
+
+            return branchEvent;
+        }
+
+        private void InitializeInternal(AcknowledgeableConditionState alarm)
+        {
+            alarm.OnAcknowledge = OnAcknowledge;
+
+            // Create any optional 
+            if (Optional)
+            {
+                if (alarm.ConfirmedState == null)
+                {
+                    alarm.ConfirmedState = new TwoStateVariableState(alarm);
+                }
+                alarm.Confirm = new AddCommentMethodState(alarm);
+            }
+        }
+
+
 
         #region Overrides 
 
@@ -126,14 +151,28 @@ namespace Quickstarts.ReferenceServer
             return retainState;
         }
 
+        protected void ReplaceBranchEvent( byte[] originalEventId, AcknowledgeableConditionState alarm )
+        {
+            string originalKey = Utils.ToHexString(originalEventId);
+            string newKey = Utils.ToHexString(alarm.EventId.Value);
+
+            m_branches.Remove(originalKey);
+            m_branches.Add(newKey, alarm);
+        }
+
         #endregion
 
         #region Helpers
 
-        private AcknowledgeableConditionState GetAlarm()
+        private AcknowledgeableConditionState GetAlarm(BaseEventState alarm = null)
         {
-            return (AcknowledgeableConditionState)m_alarm;
+            if (alarm == null)
+            {
+                alarm = m_alarm;
+            }
+            return (AcknowledgeableConditionState)alarm;
         }
+
 
         #endregion
 
@@ -145,12 +184,27 @@ namespace Quickstarts.ReferenceServer
             byte[] eventId,
             LocalizedText comment)
         {
-            if ( !IsEvent( eventId ) )
+            AcknowledgeableConditionState alarm = null;
+            bool branchEvent = false;
+
+            if (IsEvent(eventId))
+            {
+                alarm = GetAlarm();
+            }
+            else
+            {
+                BaseEventState branch = GetEventByEventId(eventId);
+                if (branch != null)
+                {
+                    alarm = GetAlarm(branch);
+                    branchEvent = true;
+                }
+            }
+
+            if ( alarm == null )
             {
                 return StatusCodes.BadEventIdUnknown;
             }
-
-            AcknowledgeableConditionState alarm = GetAlarm();
 
             if ( alarm.AckedState.Id.Value )
             {
@@ -175,6 +229,30 @@ namespace Quickstarts.ReferenceServer
 
             alarm.Retain.Value = GetRetainState();
 
+            if ( branchEvent )
+            {
+                if ( !Optional )
+                {
+                    alarm.Retain.Value = false;
+                    SetActive(alarm, false);
+                }
+
+                ReportEvent(alarm);
+
+                if (Optional)
+                {
+                    ReplaceBranchEvent(eventId, alarm);
+                }
+                else
+                {
+                    lock (GetNodeManager().Lock)
+                    {
+                        m_branches.Remove(Utils.ToHexString(eventId));
+                        m_alarmController.SetBranchCount(m_branches.Count);
+                    }
+                }
+            }
+
             return ServiceResult.Good;
         }
 
@@ -185,16 +263,31 @@ namespace Quickstarts.ReferenceServer
             byte[] eventId,
             LocalizedText comment)
         {
-            if (!IsEvent(eventId))
-            {
-                return StatusCodes.BadEventIdUnknown;
-            }
-
-            AcknowledgeableConditionState alarm = GetAlarm();
-
             if (!Optional)
             {
                 return StatusCodes.BadMethodInvalid;
+            }
+
+            AcknowledgeableConditionState alarm = null;
+            bool branchEvent = false;
+
+            if (IsEvent(eventId))
+            {
+                alarm = GetAlarm();
+            }
+            else
+            {
+                BaseEventState branch = GetEventByEventId(eventId);
+                if (branch != null)
+                {
+                    alarm = GetAlarm(branch);
+                    branchEvent = true;
+                }
+            }
+
+            if (alarm == null)
+            {
+                return StatusCodes.BadEventIdUnknown;
             }
 
             alarm.SetConfirmedState(SystemContext, confirmed: true);
@@ -210,6 +303,20 @@ namespace Quickstarts.ReferenceServer
             }
 
             alarm.Retain.Value = GetRetainState();
+
+            if (branchEvent)
+            {
+                SetActive(alarm, false);
+                alarm.Retain.Value = false;
+                
+                ReportEvent(alarm);
+                lock (GetNodeManager().Lock)
+                {
+                    m_branches.Remove(Utils.ToHexString(eventId));
+                    m_alarmController.SetBranchCount(m_branches.Count);
+
+                }
+            }
 
             return ServiceResult.Good;
         }

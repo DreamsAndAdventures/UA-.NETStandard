@@ -11,48 +11,135 @@ namespace Quickstarts.ReferenceServer
 {
     public class AlarmHolder
     {
-        public AlarmHolder(Alarms alarms, Type controllerType, int interval)
+        public AlarmHolder(Alarms alarms, FolderState parent, Type controllerType, int interval)
         {
             m_alarms = alarms;
+            m_parent = parent;
             m_alarmControllerType = controllerType;
             m_alarmController = null;
             m_interval = interval;
+            m_branches = new Dictionary<string, BaseEventState>();
         }
 
-        public void Initialize(FolderState parent, string alarmTypeName, string name )
+        protected void Initialize(uint alarmTypeIdentifier, string name)
         {
+            m_alarmTypeIdentifier = alarmTypeIdentifier;
+            m_alarmTypeName = GetAlarmTypeName(m_alarmTypeIdentifier);
+
             string extraName = "";
             if (name.Length > 0)
             {
                 extraName = "." + name;
             }
 
-            m_alarmRootName = alarmTypeName + extraName;
-            m_mapName = (string)parent.NodeId.Identifier + "." + m_alarmRootName;
+            m_alarmRootName = m_alarmTypeName + extraName;
+            m_mapName = (string)m_parent.NodeId.Identifier + "." + m_alarmRootName;
             Debug.WriteLine("Creating " + m_mapName);
 
-            string triggerNodeId = (string)parent.NodeId.Identifier + "." + TriggerName;
-            string alarmNodeId = (string)parent.NodeId.Identifier + "." + AlarmName;
 
-            ReferenceNodeManager manager = m_alarms.GetNodeManager();
-
-            m_trigger = Helpers.CreateVariable(parent, manager.NamespaceIndex, triggerNodeId, TriggerName, !Analog);
-            m_trigger.OnWriteValue = OnWriteAlarmTrigger;
-            m_alarm.SymbolicName = AlarmName;
-            m_alarm.ReferenceTypeId = ReferenceTypeIds.HasComponent;
-            m_alarm.Create(
-                manager.SystemContext,
-                new NodeId( alarmNodeId, manager.NamespaceIndex ),
-                new QualifiedName(AlarmName, manager.NamespaceIndex ),
-                new LocalizedText( AlarmName ),
-                true);
-
-            parent.AddChild(m_alarm);
-
-            m_alarmController = (AlarmController)Activator.CreateInstance(m_alarmControllerType, m_trigger, m_interval, !Analog );
+            InitializeInternal(m_alarm);
         }
 
-        public virtual void Update( )
+        public bool HasBranches()
+        {
+            return m_branches.Count > 0; 
+        }
+
+        public BaseEventState GetBranch( byte[] eventId )
+        {
+            BaseEventState state = null;
+            string eventIdString = Utils.ToHexString(eventId);
+            m_branches.TryGetValue(eventIdString, out state);
+
+            return state;
+        }
+
+        public void GetBranchesForConditionRefresh(List<IFilterTarget> events)
+        {
+            // Don't look at Certificates, they won't have branches
+            foreach (BaseEventState alarm in m_branches.Values)
+            {
+                events.Add(alarm);
+            }
+        }
+
+
+        protected virtual void CreateBranch()
+        {
+        }
+
+        public virtual BaseEventState CreateBranch(BaseEventState alarm, NodeId branchId)
+        {
+            InitializeInternal(alarm, branchId);
+            return alarm;
+        }
+
+        private void InitializeInternal(BaseEventState alarm, NodeId branchId = null )
+        {
+            string triggerNodeId = (string)m_parent.NodeId.Identifier + "." + TriggerName;
+
+            string alarmName = AlarmName/* + GetBranchNodeIdString(branchId)*/;
+            string alarmNodeId = (string)m_parent.NodeId.Identifier + "." + AlarmName;
+
+            alarm.SymbolicName = alarmName;
+
+            NodeId createNodeId = null;
+            QualifiedName createQualifiedName = new QualifiedName(alarmName, NamespaceIndex);
+            LocalizedText createLocalizedText = null;
+
+
+            bool isBranch = IsBranch(branchId);
+                createNodeId = new NodeId(alarmNodeId, NamespaceIndex);
+                createLocalizedText = new LocalizedText(alarmName);
+
+            alarm.ReferenceTypeId = ReferenceTypeIds.HasComponent;
+            alarm.Create(
+                SystemContext,
+                createNodeId,
+                createQualifiedName,
+                createLocalizedText,
+                true);
+
+
+            if (!isBranch)
+            {
+                m_trigger = Helpers.CreateVariable(m_parent, NamespaceIndex, triggerNodeId, TriggerName, !Analog);
+                m_trigger.OnWriteValue = OnWriteAlarmTrigger;
+
+                m_parent.AddChild(alarm);
+                m_alarmController = (AlarmController)Activator.CreateInstance(m_alarmControllerType, m_trigger, m_interval, !Analog);
+            }
+
+        }
+
+        private bool IsBranch( NodeId branchId )
+        {
+            bool isBranch = false;
+            if ( branchId != null && !branchId.IsNullNodeId )
+            {
+                isBranch = true;
+            }
+            return isBranch;
+        }
+
+        public NodeId GetNewBranchId()
+        {
+            return new NodeId(++m_branchCounter, NamespaceIndex);
+        }
+
+        public virtual string GetBranchNodeIdString(NodeId branchId)
+        {
+            string nodeIdString = "";
+
+            if ( IsBranch(branchId) )
+            {
+                // Just the numeric
+                nodeIdString = "." + branchId.Identifier.ToString();
+            }
+            return nodeIdString;
+        }
+
+        public virtual void Update()
         {
             SetValue(m_alarmController.Update(SystemContext));
         }
@@ -74,6 +161,11 @@ namespace Quickstarts.ReferenceServer
             return false;
         }
 
+        protected virtual void SetActive(BaseEventState state, bool activeState)
+        {
+
+        }
+
         #region Methods
 
         public ServiceResult OnWriteAlarmTrigger(
@@ -91,7 +183,7 @@ namespace Quickstarts.ReferenceServer
                 SetValue(true, "Manual Write to trigger " + value.ToString());
             }
 
-            
+
 
 
             return Opc.Ua.StatusCodes.Good;
@@ -104,6 +196,11 @@ namespace Quickstarts.ReferenceServer
         public ISystemContext SystemContext
         {
             get { return GetNodeManager().SystemContext; }
+        }
+
+        public ushort NamespaceIndex
+        {
+            get { return GetNodeManager().NamespaceIndex; }
         }
 
         public BaseEventState Alarm
@@ -128,12 +225,12 @@ namespace Quickstarts.ReferenceServer
 
         public string TriggerName
         {
-            get { return m_alarmRootName + ".Trigger"; }
+            get { return m_alarmRootName + Defines.TRIGGER_EXTENSION; }
         }
 
         public string AlarmName
         {
-            get { return m_alarmRootName + ".Alarm"; }
+            get { return m_alarmRootName + Defines.ALARM_EXTENSION; }
         }
 
         public bool Analog
@@ -159,6 +256,127 @@ namespace Quickstarts.ReferenceServer
             return m_alarms.GetNodeManager();
         }
 
+        protected string GetAlarmTypeName(UInt32 alarmTypeIdentifier)
+        {
+            string alarmTypeName = "";
+
+            switch (alarmTypeIdentifier)
+            {
+                case Opc.Ua.ObjectTypes.ConditionType:
+                    alarmTypeName = "ConditionType";
+                    break;
+
+                case Opc.Ua.ObjectTypes.DialogConditionType:
+                    alarmTypeName = "DialogConditionType";
+                    break;
+
+                case Opc.Ua.ObjectTypes.AcknowledgeableConditionType:
+                    alarmTypeName = "AcknowledgeableConditionType";
+                    break;
+
+                case Opc.Ua.ObjectTypes.AlarmConditionType:
+                    alarmTypeName = "AlarmConditionType";
+                    break;
+
+                case Opc.Ua.ObjectTypes.AlarmGroupType:
+                    alarmTypeName = "AlarmGroupType";
+                    break;
+
+                case Opc.Ua.ObjectTypes.ShelvedStateMachineType:
+                    alarmTypeName = "ShelvedStateMachineType";
+                    break;
+
+                case Opc.Ua.ObjectTypes.LimitAlarmType:
+                    alarmTypeName = "LimitAlarmType";
+                    break;
+
+                case Opc.Ua.ObjectTypes.ExclusiveLimitStateMachineType:
+                    alarmTypeName = "ExclusiveLimitStateMachineType";
+                    break;
+
+                case Opc.Ua.ObjectTypes.ExclusiveLimitAlarmType:
+                    alarmTypeName = "ExclusiveLimitAlarmType";
+                    break;
+
+                case Opc.Ua.ObjectTypes.NonExclusiveLimitAlarmType:
+                    alarmTypeName = "NonExclusiveLimitAlarmType";
+                    break;
+
+                case Opc.Ua.ObjectTypes.NonExclusiveLevelAlarmType:
+                    alarmTypeName = "NonExclusiveLevelAlarmType";
+                    break;
+
+                case Opc.Ua.ObjectTypes.ExclusiveLevelAlarmType:
+                    alarmTypeName = "ExclusiveLevelAlarmType";
+                    break;
+
+                case Opc.Ua.ObjectTypes.NonExclusiveDeviationAlarmType:
+                    alarmTypeName = "NonExclusiveDeviationAlarmType";
+                    break;
+
+                case Opc.Ua.ObjectTypes.NonExclusiveRateOfChangeAlarmType:
+                    alarmTypeName = "NonExclusiveRateOfChangeAlarmType";
+                    break;
+
+                case Opc.Ua.ObjectTypes.ExclusiveDeviationAlarmType:
+                    alarmTypeName = "ExclusiveDeviationAlarmType";
+                    break;
+
+                case Opc.Ua.ObjectTypes.ExclusiveRateOfChangeAlarmType:
+                    alarmTypeName = "ExclusiveRateOfChangeAlarmType";
+                    break;
+
+                case Opc.Ua.ObjectTypes.DiscreteAlarmType:
+                    alarmTypeName = "DiscreteAlarmType";
+                    break;
+
+                case Opc.Ua.ObjectTypes.OffNormalAlarmType:
+                    alarmTypeName = "OffNormalAlarmType";
+                    break;
+
+                case Opc.Ua.ObjectTypes.SystemOffNormalAlarmType:
+                    alarmTypeName = "SystemOffNormalAlarmType";
+                    break;
+
+                case Opc.Ua.ObjectTypes.TripAlarmType:
+                    alarmTypeName = "TripAlarmType";
+                    break;
+
+                case Opc.Ua.ObjectTypes.InstrumentDiagnosticAlarmType:
+                    alarmTypeName = "InstrumentDiagnosticAlarmType";
+                    break;
+
+                case Opc.Ua.ObjectTypes.SystemDiagnosticAlarmType:
+                    alarmTypeName = "SystemDiagnosticAlarmType";
+                    break;
+
+                case Opc.Ua.ObjectTypes.CertificateExpirationAlarmType:
+                    alarmTypeName = "CertificateExpirationAlarmType";
+                    break;
+
+                case Opc.Ua.ObjectTypes.DiscrepancyAlarmType:
+                    alarmTypeName = "DiscrepancyAlarmType";
+                    break;
+            }
+
+            return alarmTypeName;
+        }
+
+        protected ushort GetNameSpaceIndex(UInt32 alarmTypeIdentifier)
+        {
+            ushort nameSpaceIndex = 0;
+
+            switch (alarmTypeIdentifier)
+            {
+                case Defines.DERIVED_SYSTEM_OFF_NORMAL_ALARM_TYPE:
+                    nameSpaceIndex = m_alarms.GetNodeManager().NamespaceIndex;
+                    break;
+            }
+
+            return nameSpaceIndex;
+        }
+
+
         #endregion
 
         #region Private Fields
@@ -172,6 +390,12 @@ namespace Quickstarts.ReferenceServer
         protected bool m_analog = true;
         protected bool m_optional = false;
         protected int m_interval = 0;
+        protected uint m_branchCounter = 0;
+        protected Dictionary<string, BaseEventState> m_branches = null;
+        protected FolderState m_parent = null;
+        protected uint m_alarmTypeIdentifier = 0;
+        protected string m_alarmTypeName = "";
+        protected SupportedAlarmConditionType m_alarmConditionType = null;
         #endregion
 
 
