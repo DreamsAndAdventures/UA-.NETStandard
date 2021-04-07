@@ -257,14 +257,20 @@ namespace Opc.Ua.Configuration
             }
             catch (Exception e)
             {
+                Utils.Trace(e, "Could not load configuration file. {0}", filePath);
+
                 // warn user.
-                if (!silent && MessageDlg != null)
+                if (!silent)
                 {
-                    MessageDlg.Message("Load Application Configuration: " + e.Message);
-                    await MessageDlg.ShowAsync().ConfigureAwait(false);
+                    if (MessageDlg != null)
+                    {
+                        MessageDlg.Message("Load Application Configuration: " + e.Message);
+                        await MessageDlg.ShowAsync().ConfigureAwait(false);
+                    }
+
+                    throw;
                 }
 
-                Utils.Trace(e, "Could not load configuration file. {0}", filePath);
                 return null;
             }
         }
@@ -274,9 +280,21 @@ namespace Opc.Ua.Configuration
         /// </summary>
         public async Task<ApplicationConfiguration> LoadApplicationConfiguration(string filePath, bool silent)
         {
-            ApplicationConfiguration configuration = await LoadAppConfig(
-                silent, filePath, ApplicationType, ConfigurationType, true, CertificatePasswordProvider)
-                .ConfigureAwait(false);
+            ApplicationConfiguration configuration = null;
+
+            try
+            {
+                configuration = await LoadAppConfig(
+                    silent, filePath, ApplicationType, ConfigurationType, true, CertificatePasswordProvider)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                if (!silent)
+                {
+                    throw;
+                }
+            }
 
             if (configuration == null)
             {
@@ -294,18 +312,8 @@ namespace Opc.Ua.Configuration
         public async Task<ApplicationConfiguration> LoadApplicationConfiguration(bool silent)
         {
             string filePath = ApplicationConfiguration.GetFilePathFromAppConfig(ConfigSectionName);
-            ApplicationConfiguration configuration = await LoadAppConfig(
-                silent, filePath, ApplicationType, ConfigurationType, true, CertificatePasswordProvider)
-                .ConfigureAwait(false);
 
-            if (configuration == null)
-            {
-                throw ServiceResultException.Create(StatusCodes.BadConfigurationError, "Could not load configuration file.");
-            }
-
-            m_applicationConfiguration = FixupAppConfig(configuration);
-
-            return m_applicationConfiguration;
+            return await LoadApplicationConfiguration(filePath, silent).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -446,7 +454,7 @@ namespace Opc.Ua.Configuration
                     && e.Error != null && e.Error.Code == StatusCodes.BadCertificateUntrusted)
                 {
                     e.Accept = true;
-                    Utils.Trace((int)Utils.TraceMasks.Security, "Automatically accepted certificate: {0}", e.Certificate.Subject);
+                    Utils.Trace(Utils.TraceMasks.Security, "Automatically accepted certificate: {0}", e.Certificate.Subject);
                 }
             }
             catch (Exception exception)
