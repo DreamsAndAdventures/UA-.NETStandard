@@ -42,7 +42,7 @@ namespace Quickstarts.ReferenceServer
 
         public bool HasBranches()
         {
-            return m_branches.Count > 0; 
+            return m_branches.Count > 0;
         }
 
         public BaseEventState GetBranch( byte[] eventId )
@@ -52,6 +52,12 @@ namespace Quickstarts.ReferenceServer
             m_branches.TryGetValue(eventIdString, out state);
 
             return state;
+        }
+
+        public void ClearBranches()
+        {
+            m_branches.Clear();
+            m_alarmController.SetBranchCount(m_branches.Count);
         }
 
         public void GetBranchesForConditionRefresh(List<IFilterTarget> events)
