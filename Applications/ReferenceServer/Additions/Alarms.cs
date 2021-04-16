@@ -27,12 +27,35 @@ namespace Quickstarts.ReferenceServer
         private ReferenceNodeManager m_nodeManager;
         private ushort NameSpaceIndex = 0;
         Dictionary<string, AlarmHolder> m_alarms = new Dictionary<string, AlarmHolder>();
-        Dictionary<string, BaseEventState> m_branches = new Dictionary<string, BaseEventState>();
+        Dictionary<string, Dictionary<string, AlarmHolder>> m_alarmMap = new Dictionary<string, Dictionary<string, AlarmHolder>>();
         CertificateExpirationTypeHolder m_expired = null;
         CertificateExpirationTypeHolder m_inside = null;
         CertificateExpirationTypeHolder m_outside = null;
         private bool m_allowEntry = false;
         private bool m_autoRun = false;
+
+        private string[] m_conformanceUnits = {
+            "Basic",
+            "Alarm",
+            "Acknowledge",
+            "Confirm",
+            "Alarm",
+            "Shelve",
+            "Comment",
+            "Suppression",
+            "OffNormal",
+            "SystemOffNormal",
+            "CertificateExpiration",
+            "Refresh",
+            "Refresh2",
+            "Discrete",
+            "ConditionClasses"
+        };
+
+        private SupportedAlarmConditionType[] m_ConditionTypes = {
+                    new SupportedAlarmConditionType( "Process", "ProcessConditionClassType",  ObjectTypeIds.ProcessConditionClassType ),
+                    new SupportedAlarmConditionType( "Maintenance", "MaintenanceConditionClassType",  ObjectTypeIds.MaintenanceConditionClassType ),
+                    new SupportedAlarmConditionType( "System", "SystemConditionClassType",  ObjectTypeIds.SystemConditionClassType ) };
 
         public Alarms(ReferenceNodeManager nodeManager )
         {
@@ -46,6 +69,187 @@ namespace Quickstarts.ReferenceServer
         }
 
         public void CreateAlarms(FolderState root)
+        {
+            string alarmsName = "Alarms";
+            string alarmsNodeName = alarmsName;
+            FolderState alarmsFolder = Helpers.CreateFolder(root, NameSpaceIndex, alarmsNodeName, alarmsName);
+
+            // Setpoint NodeId
+            BaseDataVariableState deviationSetpoint = Helpers.CreateVariable(alarmsFolder, NameSpaceIndex, "DeviationSetpoint", "DeviationSetpoint");
+            deviationSetpoint.AccessLevel = AccessLevels.CurrentRead;
+            deviationSetpoint.UserAccessLevel = AccessLevels.CurrentRead;
+            deviationSetpoint.Value = 50;
+
+
+            int interval = 0;
+            string intervalString = interval.ToString();
+
+            int conditionTypeIndex = 0;
+            bool useOptional = true;
+            foreach( string unitName in m_conformanceUnits )
+            {
+                string unitNodeName = alarmsName + "." + unitName;
+                FolderState unitFolder = Helpers.CreateFolder(alarmsFolder, NameSpaceIndex,
+                    unitNodeName, unitName);
+
+                Dictionary<string, AlarmHolder> alarmMap = new Dictionary<string, AlarmHolder>();
+
+                m_alarmMap.Add(unitName, alarmMap);
+
+                AlarmHolder ackAlarmType = new AcknowledgeableConditionTypeHolder(
+                    this,
+                    unitFolder,
+                    intervalString,
+                    GetSupportedAlarmConditionType( ref conditionTypeIndex ),
+                    Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                    interval,
+                    optional: GetUseOptional( ref useOptional ) );
+                alarmMap.Add(ackAlarmType.MapName, ackAlarmType);
+
+                AlarmHolder alarmConditionType = new AlarmConditionTypeHolder(
+                    this,
+                    unitFolder,
+                    intervalString,
+                    GetSupportedAlarmConditionType( ref conditionTypeIndex ),
+                    Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                    interval,
+                    optional: GetUseOptional(ref useOptional));
+                alarmMap.Add(alarmConditionType.MapName, alarmConditionType);
+
+                AlarmHolder discrepancy = new DiscrepancyAlarmTypeHolder(
+                    this,
+                    unitFolder,
+                    intervalString,
+                    GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                    Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                    interval,
+                    optional: GetUseOptional(ref useOptional));
+                alarmMap.Add(discrepancy.MapName, discrepancy);
+
+                AlarmHolder discrete = new DiscreteHolder(
+                    this,
+                    unitFolder,
+                    intervalString,
+                    GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                    Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                    interval,
+                    optional: GetUseOptional(ref useOptional));
+                alarmMap.Add(discrete.MapName, discrete);
+
+                AlarmHolder limit = new LimitAlarmTypeHolder(
+                    this,
+                    unitFolder,
+                    intervalString,
+                    GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                    Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                    interval,
+                    optional: GetUseOptional(ref useOptional));
+                alarmMap.Add(limit.MapName, limit);
+
+                AlarmHolder exclusiveLimit = new ExclusiveLimitHolder(
+                    this,
+                    unitFolder,
+                    intervalString,
+                    GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                    Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                    interval,
+                    optional: GetUseOptional(ref useOptional));
+                alarmMap.Add(exclusiveLimit.MapName, exclusiveLimit);
+
+                AlarmHolder exclusiveLevel = new ExclusiveLevelHolder(
+                    this,
+                    unitFolder,
+                    intervalString,
+                    GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                    Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                    interval,
+                    optional: GetUseOptional(ref useOptional));
+                alarmMap.Add(exclusiveLevel.MapName, exclusiveLevel);
+
+                AlarmHolder exclusiveRateOfChange = new ExclusiveRateOfChangeHolder(
+                    this,
+                    unitFolder,
+                    intervalString,
+                    GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                    Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                    interval,
+                    optional: GetUseOptional(ref useOptional));
+                alarmMap.Add(exclusiveRateOfChange.MapName, exclusiveRateOfChange);
+
+                AlarmHolder exclusiveDeviation = new ExclusiveDeviationHolder(
+                    this,
+                    unitFolder,
+                    intervalString,
+                    GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                    Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                    interval,
+                    deviationSetpoint.NodeId,
+                    optional: GetUseOptional(ref useOptional));
+                alarmMap.Add(exclusiveDeviation.MapName, exclusiveDeviation);
+
+                AlarmHolder nonExclusiveLimit = new NonExclusiveLimitHolder(
+                    this,
+                    unitFolder,
+                    intervalString,
+                    GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                    Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                    interval,
+                    optional: GetUseOptional(ref useOptional));
+                alarmMap.Add(nonExclusiveLimit.MapName, nonExclusiveLimit);
+
+                AlarmHolder nonExclusiveLevel = new NonExclusiveLevelHolder(
+                    this,
+                    unitFolder,
+                    intervalString,
+                    GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                    Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                    interval,
+                    optional: GetUseOptional(ref useOptional));
+                alarmMap.Add(nonExclusiveLevel.MapName, nonExclusiveLevel);
+
+                AlarmHolder nonExclusiveRateOfChange = new NonExclusiveRateOfChangeHolder(
+                    this,
+                    unitFolder,
+                    intervalString,
+                    GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                    Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                    interval,
+                    optional: GetUseOptional(ref useOptional));
+                alarmMap.Add(nonExclusiveRateOfChange.MapName, nonExclusiveRateOfChange);
+
+                AlarmHolder nonExclusiveDeviation = new NonExclusiveDeviationHolder(
+                    this,
+                    unitFolder,
+                    intervalString,
+                    GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                    Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                    interval,
+                    deviationSetpoint.NodeId,
+                    optional: GetUseOptional(ref useOptional));
+                alarmMap.Add(nonExclusiveDeviation.MapName, nonExclusiveDeviation);
+            }
+       
+        }
+
+        public SupportedAlarmConditionType GetSupportedAlarmConditionType( ref int index )
+        {
+            SupportedAlarmConditionType conditionType = m_ConditionTypes[index];
+            index++;
+            if ( index >= m_ConditionTypes.Length )
+            {
+                index = 0;
+            }
+            return conditionType;
+        }
+
+        public bool GetUseOptional( ref bool optional )
+        {
+            bool returnValue = optional;
+            optional = !optional;
+            return returnValue;
+        }
+
+        public void CreateAlarms_Obsolete(FolderState root)
         {
             NodeState derivedSystemOffNormalAlarmType = DerivedSystemOffNormalAlarmType.CreateType(GetNodeManager());
 
@@ -873,6 +1077,13 @@ namespace Quickstarts.ReferenceServer
             ConditionState condition,
             bool enabling)
         {
+            return ServiceResult.Good;
+        }
+
+        public ServiceResult OnEnableBasic(
+            ISystemContext context )
+        {
+            
             return ServiceResult.Good;
         }
 

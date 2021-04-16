@@ -42,8 +42,6 @@ namespace Quickstarts.ReferenceServer
                 m_allowChanges = true;
             }
 
-            // Change this.  for 2000 the goal was to get to alarm in two seconds, and get out of alarm two seconds later.
-            // That means I need to change my values much faster, as my interval is max one second.
 
 
             m_nextTime = m_nextTime.AddMilliseconds(m_interval);
