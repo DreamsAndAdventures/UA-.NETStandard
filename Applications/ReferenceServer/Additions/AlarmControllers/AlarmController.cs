@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 
 using Opc.Ua;
 
+#pragma warning disable CS0219
+
 namespace Quickstarts.ReferenceServer
 {
     public class AlarmController

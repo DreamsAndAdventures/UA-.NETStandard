@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 using Opc.Ua;
+#pragma warning disable CS0219
 
 namespace Quickstarts.ReferenceServer
 {
@@ -28,7 +29,7 @@ namespace Quickstarts.ReferenceServer
             }
         }
 
-        public void Initialize(
+        public new void Initialize(
             uint alarmTypeIdentifier,
             string name,
             double maxTimeShelved = Defines.NORMAL_MAX_TIME_SHELVED)

@@ -22,7 +22,7 @@ namespace Quickstarts.ReferenceServer
             m_optional = optional;
         }
 
-        protected void Initialize(
+        protected new void Initialize(
             uint alarmTypeIdentifier,
             string name)
         {

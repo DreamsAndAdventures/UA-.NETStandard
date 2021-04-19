@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 using Opc.Ua;
 using Opc.Ua.Server;
 
+#pragma warning disable CS0219
 
 namespace Quickstarts.ReferenceServer
 {
@@ -32,7 +33,6 @@ namespace Quickstarts.ReferenceServer
         CertificateExpirationTypeHolder m_inside = null;
         CertificateExpirationTypeHolder m_outside = null;
         private bool m_allowEntry = false;
-        private bool m_autoRun = false;
 
         private string[] m_conformanceUnits = {
             "Basic",
@@ -68,7 +68,7 @@ namespace Quickstarts.ReferenceServer
             return m_nodeManager;
         }
 
-        public void CreateAlarms(FolderState root)
+        public void CreateAlarms_develop(FolderState root)
         {
             string alarmsName = "Alarms";
             string alarmsNodeName = alarmsName;
@@ -249,7 +249,7 @@ namespace Quickstarts.ReferenceServer
             return returnValue;
         }
 
-        public void CreateAlarms_Obsolete(FolderState root)
+        public void CreateAlarms(FolderState root)
         {
             NodeState derivedSystemOffNormalAlarmType = DerivedSystemOffNormalAlarmType.CreateType(GetNodeManager());
 
@@ -944,7 +944,6 @@ namespace Quickstarts.ReferenceServer
             IList<object> inputArguments,
             IList<object> outputArguments)
         {
-            m_autoRun = true;
             return ServiceResult.Good;
         }
 
@@ -954,7 +953,6 @@ namespace Quickstarts.ReferenceServer
             IList<object> inputArguments,
             IList<object> outputArguments)
         {
-            m_autoRun = false;
             return ServiceResult.Good;
         }
 

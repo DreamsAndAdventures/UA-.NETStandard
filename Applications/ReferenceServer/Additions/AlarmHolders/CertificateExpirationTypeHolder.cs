@@ -32,7 +32,7 @@ namespace Quickstarts.ReferenceServer
             }
         }
 
-        public void Initialize(
+        public new void Initialize(
             uint alarmTypeIdentifier,
             string name,
             double maxTimeShelved = Defines.NORMAL_MAX_TIME_SHELVED)

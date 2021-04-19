@@ -35,7 +35,7 @@ namespace Quickstarts.ReferenceServer
             return setValue;
         }
 
-        protected virtual void GetValue(ref int intValue, ref bool boolValue)
+        protected override void GetValue(ref int intValue, ref bool boolValue)
         {
             int maxValue = 100;
             int minValue = 0;

@@ -1,9 +1,5 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 using Opc.Ua;
 
@@ -21,8 +17,8 @@ namespace Quickstarts.ReferenceServer
             Type controllerType,
             int interval,
             bool optional = true,
-            bool create = true ) :
-            base( alarms, parent, name, alarmConditionType, controllerType, interval, optional )
+            bool create = true) :
+            base(alarms, parent, name, alarmConditionType, controllerType, interval, optional)
         {
             if (create)
             {
@@ -30,12 +26,12 @@ namespace Quickstarts.ReferenceServer
             }
         }
 
-        protected void Initialize(
+        protected new void Initialize(
             uint alarmTypeIdentifier,
             string name)
         {
             // Create an alarm and trigger name - Create a base method for creating the trigger, just provide the name
-            
+
             if (m_alarm == null)
             {
                 m_alarm = new AcknowledgeableConditionState(m_parent);
@@ -103,7 +99,7 @@ namespace Quickstarts.ReferenceServer
 
         #region Overrides 
 
-        public override void SetValue(bool valueUpdated, string message = "" )
+        public override void SetValue(bool valueUpdated, string message = "")
         {
             bool requiresUpdate = false;
 
@@ -122,7 +118,7 @@ namespace Quickstarts.ReferenceServer
                 }
             }
 
-            if ( requiresUpdate || valueUpdated )
+            if (requiresUpdate || valueUpdated)
             {
                 base.SetValue(valueUpdated, message);
             }
@@ -151,7 +147,7 @@ namespace Quickstarts.ReferenceServer
             return retainState;
         }
 
-        protected void ReplaceBranchEvent( byte[] originalEventId, AcknowledgeableConditionState alarm )
+        protected void ReplaceBranchEvent(byte[] originalEventId, AcknowledgeableConditionState alarm)
         {
             string originalKey = Utils.ToHexString(originalEventId);
             string newKey = Utils.ToHexString(alarm.EventId.Value);
@@ -201,23 +197,23 @@ namespace Quickstarts.ReferenceServer
                 }
             }
 
-            if ( alarm == null )
+            if (alarm == null)
             {
                 return StatusCodes.BadEventIdUnknown;
             }
 
-            if ( alarm.AckedState.Id.Value )
+            if (alarm.AckedState.Id.Value)
             {
                 return StatusCodes.BadConditionBranchAlreadyAcked;
             }
 
             alarm.SetAcknowledgedState(SystemContext, acknowledged: true);
-            if ( Optional )
+            if (Optional)
             {
                 alarm.SetConfirmedState(SystemContext, confirmed: false);
             }
 
-            if ( CanSetComment( comment ) )
+            if (CanSetComment(comment))
             {
                 Debug.Print(m_mapName + " Ack Setting Comment to " + comment.ToString());
                 alarm.Comment.Value = comment;
@@ -229,9 +225,9 @@ namespace Quickstarts.ReferenceServer
 
             alarm.Retain.Value = GetRetainState();
 
-            if ( branchEvent )
+            if (branchEvent)
             {
-                if ( !Optional )
+                if (!Optional)
                 {
                     alarm.Retain.Value = false;
                     SetActive(alarm, false);
@@ -308,7 +304,7 @@ namespace Quickstarts.ReferenceServer
             {
                 SetActive(alarm, false);
                 alarm.Retain.Value = false;
-                
+
                 ReportEvent(alarm);
                 lock (GetNodeManager().Lock)
                 {
