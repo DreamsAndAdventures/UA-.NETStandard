@@ -37,9 +37,9 @@ namespace Quickstarts.ReferenceServer
         private string[] m_conformanceUnits = {
             "Basic",
             "Alarm",
+            "Enable",
             "Acknowledge",
             "Confirm",
-            "Alarm",
             "Shelve",
             "Comment",
             "Suppression",
@@ -68,7 +68,7 @@ namespace Quickstarts.ReferenceServer
             return m_nodeManager;
         }
 
-        public void CreateAlarms_develop(FolderState root)
+        public void CreateAlarms(FolderState root)
         {
             string alarmsName = "Alarms";
             string alarmsNodeName = alarmsName;
@@ -81,27 +81,52 @@ namespace Quickstarts.ReferenceServer
             deviationSetpoint.Value = 50;
 
 
-            int interval = 0;
-            string intervalString = interval.ToString();
+            Type alarmControllerType = Type.GetType("Quickstarts.ReferenceServer.AlarmController");
+            int defaultInterval = 500;
+            string defaultIntervalString = defaultInterval.ToString();
 
             int conditionTypeIndex = 0;
             bool useOptional = true;
             foreach( string unitName in m_conformanceUnits )
             {
+                Debug.WriteLine("Adding alarms for " + unitName);
                 string unitNodeName = alarmsName + "." + unitName;
                 FolderState unitFolder = Helpers.CreateFolder(alarmsFolder, NameSpaceIndex,
                     unitNodeName, unitName);
 
+                // Create EnableDisable Method
+
+                string startMethodName = "Start";
+                string startMethodNodeName = unitNodeName + "." + startMethodName;
+                MethodState startMethod = Helpers.CreateMethod(unitFolder, NameSpaceIndex, startMethodNodeName, startMethodName);
+                startMethod.OnCallMethod = new GenericMethodCalledEventHandler(OnStart);
+
+                string endMethodName = "End";
+                string endMethodNodeName = unitNodeName + "." + endMethodName;
+                MethodState endMethod = Helpers.CreateMethod(unitFolder, NameSpaceIndex, endMethodNodeName, endMethodName);
+                endMethod.OnCallMethod = new GenericMethodCalledEventHandler(OnEnd);
+
                 Dictionary<string, AlarmHolder> alarmMap = new Dictionary<string, AlarmHolder>();
 
                 m_alarmMap.Add(unitName, alarmMap);
+
+                Type controllerType = alarmControllerType;
+                int interval = defaultInterval;
+                string intervalString = defaultIntervalString;
+
+                if (unitName == "Acknowledge")
+                {
+                    interval = 1500;
+                    intervalString = interval.ToString();
+                    //controllerType = Type.GetType("Quickstarts.ReferenceServer.AcknowledgeTestController");
+                }
 
                 AlarmHolder ackAlarmType = new AcknowledgeableConditionTypeHolder(
                     this,
                     unitFolder,
                     intervalString,
                     GetSupportedAlarmConditionType( ref conditionTypeIndex ),
-                    Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                    controllerType,
                     interval,
                     optional: GetUseOptional( ref useOptional ) );
                 alarmMap.Add(ackAlarmType.MapName, ackAlarmType);
@@ -111,17 +136,28 @@ namespace Quickstarts.ReferenceServer
                     unitFolder,
                     intervalString,
                     GetSupportedAlarmConditionType( ref conditionTypeIndex ),
-                    Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                    controllerType,
                     interval,
                     optional: GetUseOptional(ref useOptional));
                 alarmMap.Add(alarmConditionType.MapName, alarmConditionType);
+
+                // Need to disable this until the AlarmHolder is updated.
+                // Provides limited value at this time
+
+                // Discrepancy TargetValue NodeId
+                string discrepancyName = Defines.DISCREPANCY_TARGET_NAME;
+                string discrepancyNodeId = unitNodeName + "." + discrepancyName;
+                BaseDataVariableState discrepancyTargetValue = Helpers.CreateVariable(unitFolder, NameSpaceIndex, discrepancyNodeId, discrepancyName);
+                discrepancyTargetValue.AccessLevel = AccessLevels.CurrentRead;
+                discrepancyTargetValue.UserAccessLevel = AccessLevels.CurrentRead;
+                discrepancyTargetValue.Value = 50;
 
                 AlarmHolder discrepancy = new DiscrepancyAlarmTypeHolder(
                     this,
                     unitFolder,
                     intervalString,
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
-                    Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                    controllerType,
                     interval,
                     optional: GetUseOptional(ref useOptional));
                 alarmMap.Add(discrepancy.MapName, discrepancy);
@@ -131,7 +167,7 @@ namespace Quickstarts.ReferenceServer
                     unitFolder,
                     intervalString,
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
-                    Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                    controllerType,
                     interval,
                     optional: GetUseOptional(ref useOptional));
                 alarmMap.Add(discrete.MapName, discrete);
@@ -141,7 +177,7 @@ namespace Quickstarts.ReferenceServer
                     unitFolder,
                     intervalString,
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
-                    Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                    controllerType,
                     interval,
                     optional: GetUseOptional(ref useOptional));
                 alarmMap.Add(limit.MapName, limit);
@@ -151,7 +187,7 @@ namespace Quickstarts.ReferenceServer
                     unitFolder,
                     intervalString,
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
-                    Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                    controllerType,
                     interval,
                     optional: GetUseOptional(ref useOptional));
                 alarmMap.Add(exclusiveLimit.MapName, exclusiveLimit);
@@ -161,7 +197,7 @@ namespace Quickstarts.ReferenceServer
                     unitFolder,
                     intervalString,
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
-                    Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                    controllerType,
                     interval,
                     optional: GetUseOptional(ref useOptional));
                 alarmMap.Add(exclusiveLevel.MapName, exclusiveLevel);
@@ -171,7 +207,7 @@ namespace Quickstarts.ReferenceServer
                     unitFolder,
                     intervalString,
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
-                    Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                    controllerType,
                     interval,
                     optional: GetUseOptional(ref useOptional));
                 alarmMap.Add(exclusiveRateOfChange.MapName, exclusiveRateOfChange);
@@ -181,7 +217,7 @@ namespace Quickstarts.ReferenceServer
                     unitFolder,
                     intervalString,
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
-                    Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                    controllerType,
                     interval,
                     deviationSetpoint.NodeId,
                     optional: GetUseOptional(ref useOptional));
@@ -192,7 +228,7 @@ namespace Quickstarts.ReferenceServer
                     unitFolder,
                     intervalString,
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
-                    Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                    controllerType,
                     interval,
                     optional: GetUseOptional(ref useOptional));
                 alarmMap.Add(nonExclusiveLimit.MapName, nonExclusiveLimit);
@@ -202,7 +238,7 @@ namespace Quickstarts.ReferenceServer
                     unitFolder,
                     intervalString,
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
-                    Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                    controllerType,
                     interval,
                     optional: GetUseOptional(ref useOptional));
                 alarmMap.Add(nonExclusiveLevel.MapName, nonExclusiveLevel);
@@ -212,7 +248,7 @@ namespace Quickstarts.ReferenceServer
                     unitFolder,
                     intervalString,
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
-                    Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                    controllerType,
                     interval,
                     optional: GetUseOptional(ref useOptional));
                 alarmMap.Add(nonExclusiveRateOfChange.MapName, nonExclusiveRateOfChange);
@@ -222,13 +258,18 @@ namespace Quickstarts.ReferenceServer
                     unitFolder,
                     intervalString,
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
-                    Type.GetType("Quickstarts.ReferenceServer.AlarmController"),
+                    controllerType,
                     interval,
                     deviationSetpoint.NodeId,
                     optional: GetUseOptional(ref useOptional));
                 alarmMap.Add(nonExclusiveDeviation.MapName, nonExclusiveDeviation);
+
+                Debug.WriteLine("Completed alarms for " + unitName);
+
             }
-       
+
+            m_allowEntry = true;
+
         }
 
         public SupportedAlarmConditionType GetSupportedAlarmConditionType( ref int index )
@@ -249,7 +290,7 @@ namespace Quickstarts.ReferenceServer
             return returnValue;
         }
 
-        public void CreateAlarms(FolderState root)
+        public void CreateAlarms_obsolete(FolderState root)
         {
             NodeState derivedSystemOffNormalAlarmType = DerivedSystemOffNormalAlarmType.CreateType(GetNodeManager());
 
@@ -824,17 +865,12 @@ namespace Quickstarts.ReferenceServer
                     m_success++;
                     try
                     {
-                        ConfigurationNodeManager configurationNodeManager =
-                            GetNodeManager().Server.NodeManager.ConfigurationNodeManager;
-
-                        NodeId parentNodeId = new NodeId(Opc.Ua.ObjectTypeIds.SystemOffNormalAlarmType);
-                        NodeState parent = configurationNodeManager.FindPredefinedNode(parentNodeId,
-                            null);
-
-
-                        foreach (AlarmHolder alarmHolder in m_alarms.Values)
+                        foreach (Dictionary<string, AlarmHolder> map in m_alarmMap.Values)
                         {
-                            alarmHolder.Update();
+                            foreach (AlarmHolder alarmHolder in map.Values)
+                            {
+                                alarmHolder.Update();
+                            }
                         }
                     }
                     catch (Exception ex)
@@ -853,49 +889,6 @@ namespace Quickstarts.ReferenceServer
                     Debug.WriteLine(DateTime.UtcNow.ToLocalTime().ToLongTimeString() + " Missed Loop " + m_missed.ToString() + " Success " + m_success.ToString() );
                 }
             }
-        }
-
-        public void EnableAlarm(string alarmName, bool enabling)
-        {
-            //List<UnderlyingSystemAlarm> snapshots = new List<UnderlyingSystemAlarm>();
-
-            //lock (m_alarms)
-            //{
-            //    UnderlyingSystemAlarm alarm = FindAlarm(alarmName, 0);
-
-            //    if (alarm != null)
-            //    {
-            //        // enable/disable the alarm.
-            //        if (alarm.SetStateBits(UnderlyingSystemAlarmStates.Enabled, enabling))
-            //        {
-            //            alarm.Time = alarm.EnableTime = DateTime.UtcNow;
-            //            alarm.Reason = "The alarm was " + ((enabling) ? "enabled." : "disabled.");
-            //            snapshots.Add(alarm.CreateSnapshot());
-            //        }
-
-            //        // enable/disable any archived records for the alarm.
-            //        foreach (UnderlyingSystemAlarm record in m_archive.Values)
-            //        {
-            //            if (record.Name != alarmName)
-            //            {
-            //                continue;
-            //            }
-
-            //            if (record.SetStateBits(UnderlyingSystemAlarmStates.Enabled, enabling))
-            //            {
-            //                record.Time = alarm.EnableTime = DateTime.UtcNow;
-            //                record.Reason = "The alarm was " + ((enabling) ? "enabled." : "disabled.");
-            //                snapshots.Add(alarm.CreateSnapshot());
-            //            }
-            //        }
-            //    }
-            //}
-
-            //// report any alarm changes after releasing the lock.
-            //for (int ii = 0; ii < snapshots.Count; ii++)
-            //{
-            //    ReportAlarmChange(snapshots[ii]);
-            //}
         }
 
         public ServiceResult OnWriteAlarmTrigger(
@@ -1078,11 +1071,96 @@ namespace Quickstarts.ReferenceServer
             return ServiceResult.Good;
         }
 
-        public ServiceResult OnEnableBasic(
-            ISystemContext context )
+        public Dictionary<string, AlarmHolder> GetUnitAlarms( NodeState nodeState )
         {
-            
-            return ServiceResult.Good;
+            Dictionary<string, AlarmHolder> alarms = null;
+
+            string unit = GetUnitFromNodeState(nodeState);
+
+            if (m_alarmMap.ContainsKey(unit))
+            {
+                alarms = m_alarmMap[unit];
+            }
+
+            return alarms;
+        }
+
+
+        public string GetUnitFromNodeState( NodeState nodeState )
+        {
+            return GetUnitFromNodeId(nodeState.NodeId);
+        }
+
+        public string GetUnitFromNodeId( NodeId nodeId )
+        {
+            string unit = "";
+
+            if (nodeId.IdType == IdType.String)
+            {
+                string nodeIdString = (string)nodeId.Identifier;
+                string[] splitString = nodeIdString.Split('.');
+                // Alarms.UnitName.MethodName
+                if ( splitString.Length >= 1 )
+                {
+                    unit = splitString[1];
+                }
+            }
+
+            return unit;
+        }
+
+        public ServiceResult OnStart(
+            ISystemContext context,
+            NodeState node,
+            IList<object> inputArguments,
+            IList<object> outputArguments)
+        {
+            ServiceResult result = ServiceResult.Good;
+
+            Dictionary<string, AlarmHolder> alarms = GetUnitAlarms(node);
+            if ( alarms == null )
+            {
+                result = StatusCodes.BadNodeIdUnknown;
+            }
+            if ( alarms != null )
+            {
+                lock (m_alarms)
+                {
+                    foreach (AlarmHolder alarmHolder in alarms.Values)
+                    {
+                        alarmHolder.Start();
+                    }
+                }
+            }
+           
+            return result;
+        }
+
+        public ServiceResult OnEnd(
+            ISystemContext context,
+            NodeState node,
+            IList<object> inputArguments,
+            IList<object> outputArguments)
+        {
+            ServiceResult result = ServiceResult.Good;
+
+            Dictionary<string, AlarmHolder> alarms = GetUnitAlarms(node);
+            if (alarms == null)
+            {
+                result = StatusCodes.BadNodeIdUnknown;
+            }
+            if (alarms != null)
+            {
+                lock (m_alarms)
+                {
+                    foreach (AlarmHolder alarmHolder in alarms.Values)
+                    {
+                        alarmHolder.Stop();
+                    }
+                }
+            }
+
+            return result;
         }
 
     }

@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 using Opc.Ua;
 
+#pragma warning disable CS0219
+
+
 namespace Quickstarts.ReferenceServer
 {
     class DiscrepancyAlarmTypeHolder : AlarmConditionTypeHolder
@@ -33,45 +36,63 @@ namespace Quickstarts.ReferenceServer
             string name,
             double maxTimeShelved = Defines.NORMAL_MAX_TIME_SHELVED)
         {
-            m_analog = false;
 
             if (m_alarm == null)
             {
                 m_alarm = new DiscrepancyAlarmState(m_parent);
             }
 
+            DiscrepancyAlarmState alarm = GetAlarm();
+
+            if (alarm.TargetValueNode == null)
+            {
+                // This should not be hit, it's mandatory!
+                bool alwaysBreak = true; 
+                alarm.TargetValueNode = new PropertyState<NodeId>(alarm);
+            }
+
+            if ( Optional )
+            {
+                if ( alarm.Tolerance == null )
+                {
+                    alarm.Tolerance = new PropertyState<double>(alarm);
+                }
+            }
+
             // Call the base class to set parameters
             base.Initialize(alarmTypeIdentifier, name, maxTimeShelved);
+
+            alarm.TargetValueNode.Value = GetTargetValueNodeId();
+
+            alarm.ExpectedTime.Value = 100;
+
+            if (Optional)
+            {
+                alarm.Tolerance.Value = 5;
+            }
         }
 
         #region Overrides
 
-        //public override void SetValue(bool valueUpdated, string message = "")
-        //{
+        public override void SetValue(bool valueUpdated, string message = "")
+        {
+            if (valueUpdated)
+            {
+                BaseDataVariableState target = (BaseDataVariableState)GetTargetValueNodeState();
+                int value = m_alarmController.GetValue();
 
-        //    if (valueUpdated)
-        //    {
-        //        DiscreteAlarmState alarm = GetAlarm();
-        //        bool active = m_alarmController.IsBooleanActive();
-        //        int value = m_alarmController.GetValue();
-        //        if (this.GetType().Name == "DiscreteHolder")
-        //        {
-        //            if (value > 50)
-        //            {
-        //                bool waiting = true;
+                int newValue = value;
+                if (IsActive())
+                {
+                    newValue = value + 100;
+                }
+                target.Value = newValue;
+                target.Timestamp = DateTime.UtcNow;
+                target.ClearChangeMasks(SystemContext, false);
 
-        //            }
-        //            else
-        //            {
-        //                bool waiting = true;
-
-        //            }
-
-
-        //        }
-        //        base.SetValue(true, message);
-        //    }
-        //}
+                base.SetValue(true, message);
+            }
+        }
 
         #endregion
 
@@ -80,6 +101,17 @@ namespace Quickstarts.ReferenceServer
         private DiscrepancyAlarmState GetAlarm()
         {
             return (DiscrepancyAlarmState)m_alarm;
+        }
+
+        private NodeId GetTargetValueNodeId()
+        {
+            string[] splits = m_mapName.Split('.');
+            return new NodeId(splits[0] + "." + splits[1] + "." + Defines.DISCREPANCY_TARGET_NAME, NamespaceIndex);
+        }
+
+        private NodeState GetTargetValueNodeState()
+        {
+            return GetNodeManager().FindPredefinedNode(GetTargetValueNodeId(), null);
         }
 
         #endregion

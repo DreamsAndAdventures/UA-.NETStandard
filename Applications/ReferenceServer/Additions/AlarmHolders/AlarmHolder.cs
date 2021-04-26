@@ -155,6 +155,18 @@ namespace Quickstarts.ReferenceServer
             Debug.WriteLine("AlarmHolder.SetValue() - Should not be called");
         }
 
+        public void Start()
+        {
+            ClearBranches();
+            m_alarmController.Start();
+        }
+
+        public void Stop()
+        {
+            ClearBranches();
+            m_alarmController.Stop();
+        }
+
         protected virtual bool UpdateShelving()
         {
             Debug.WriteLine("AlarmHolder.UpdateShelving() - Should not be called");

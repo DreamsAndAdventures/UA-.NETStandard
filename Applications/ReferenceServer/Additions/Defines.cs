@@ -56,6 +56,7 @@ namespace Quickstarts.ReferenceServer
 
         public const string TRIGGER_EXTENSION = ".Trigger";
         public const string ALARM_EXTENSION = ".Alarm";
+        public const string DISCREPANCY_TARGET_NAME = "TargetValueNodeId";
 
 
     }

@@ -21,6 +21,7 @@ namespace Quickstarts.ReferenceServer
         protected int m_interval = 0;
         protected bool m_isBoolean = false;
         protected bool m_allowChanges = false;
+        protected bool m_reset = false;
 
         #endregion
 
@@ -34,19 +35,25 @@ namespace Quickstarts.ReferenceServer
 
             m_value = 50;
 
+            m_allowChanges = false;
+        }
+
+        public void Start()
+        {
+            Stop();
+
             m_nextTime = DateTime.Now;
-            if (m_interval == 0)
-            {
-                m_allowChanges = false;
-            }
-            else
-            {
-                m_allowChanges = true;
-            }
 
+            m_allowChanges = true;
+        }
 
+        public void Stop()
+        {
+            m_value = 50;
 
-            m_nextTime = m_nextTime.AddMilliseconds(m_interval);
+            m_allowChanges = false;
+
+            m_reset = true;
         }
 
         public bool Update(ISystemContext systemContext)
@@ -90,8 +97,10 @@ namespace Quickstarts.ReferenceServer
         {
             bool setValue = false;
 
-            if (m_allowChanges)
+            if (m_allowChanges || m_reset)
             {
+                m_reset = false;
+
                 if (DateTime.Now > m_nextTime)
                 {
                     SetNextInterval();

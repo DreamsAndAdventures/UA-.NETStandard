@@ -210,7 +210,15 @@ namespace Quickstarts.ReferenceServer
             alarm.SetAcknowledgedState(SystemContext, acknowledged: true);
             if (Optional)
             {
-                alarm.SetConfirmedState(SystemContext, confirmed: false);
+                // No Confirming on Acknowledge tests
+                if (m_alarms.GetUnitFromNodeState(alarm) == "Acknowledge")
+                {
+                    alarm.SetConfirmedState(SystemContext, confirmed: true);
+                }
+                else
+                {
+                    alarm.SetConfirmedState(SystemContext, confirmed: false);
+                }
             }
 
             if (CanSetComment(comment))

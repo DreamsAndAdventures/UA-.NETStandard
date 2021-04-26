@@ -1443,7 +1443,7 @@ namespace Quickstarts.ReferenceServer
                 }
 
                 AddPredefinedNode(SystemContext, root);
-                m_simulationTimer = new Timer(DoSimulation, null, 1000, 1000);
+                m_simulationTimer = new Timer(DoSimulation, null, 500, 500);
             }
         }
 
@@ -2789,6 +2789,16 @@ namespace Quickstarts.ReferenceServer
             for (int ii = 0; ii < methodsToCall.Count; ii++)
             {
                 CallMethodRequest methodToCall = methodsToCall[ii];
+
+                // Need to try to capture any calls to ConditionType::Acknowledge
+                if (methodToCall.ObjectId.Equals(Opc.Ua.ObjectTypeIds.ConditionType) &&
+                    methodToCall.MethodId.Equals(Opc.Ua.MethodIds.AcknowledgeableConditionType_Acknowledge))
+                {
+                    // Override any other errors that may be there, even if this is 'Processed'
+                    errors[ii] = StatusCodes.BadNodeIdUnknown;
+                    methodToCall.Processed = true;
+                    continue;
+                }
 
                 // skip items that have already been processed.
                 if (methodToCall.Processed)
