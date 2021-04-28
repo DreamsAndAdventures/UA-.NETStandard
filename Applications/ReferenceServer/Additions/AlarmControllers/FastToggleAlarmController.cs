@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 
 using Opc.Ua;
-#pragma warning disable CS0219
 
 namespace Quickstarts.ReferenceServer
 {
@@ -14,7 +13,6 @@ namespace Quickstarts.ReferenceServer
         public FastToggleAlarmController(BaseDataVariableState variable, int interval, bool isBoolean) :
             base(variable, interval, isBoolean: true)
         {
-            bool yup = true;
         }
 
         protected override bool CanSetValue()

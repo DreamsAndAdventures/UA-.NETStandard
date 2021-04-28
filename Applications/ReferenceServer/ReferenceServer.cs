@@ -151,6 +151,15 @@ namespace Quickstarts.ReferenceServer
         }
         #endregion
 
+        #region Archie
+
+        protected override void OnNodeManagerStarted(IServerInternal server)
+        {
+            server.ServerObject.ServerCapabilities.OperationLimits.MaxNodesPerBrowse.Value = 1000;
+        }
+
+        #endregion
+
         #region User Validation Functions
         /// <summary>
         /// Creates the objects used to validate the user identity tokens supported by the server.

@@ -217,6 +217,7 @@ namespace Quickstarts.ReferenceServer
                 }
                 else
                 {
+                    alarm.Message.Value = "User Acknowledged Event " + DateTime.Now.ToShortTimeString();
                     alarm.SetConfirmedState(SystemContext, confirmed: false);
                 }
             }
@@ -255,6 +256,11 @@ namespace Quickstarts.ReferenceServer
                         m_alarmController.SetBranchCount(m_branches.Count);
                     }
                 }
+            }
+            else
+            {
+                // Might need to come back to this.
+                m_alarmController.OnAcknowledge();
             }
 
             return ServiceResult.Good;
@@ -295,6 +301,7 @@ namespace Quickstarts.ReferenceServer
             }
 
             alarm.SetConfirmedState(SystemContext, confirmed: true);
+            alarm.Message.Value = "User Confirmed Event " + DateTime.Now.ToShortTimeString();
 
             if (CanSetComment(comment))
             {
@@ -320,6 +327,11 @@ namespace Quickstarts.ReferenceServer
                     m_alarmController.SetBranchCount(m_branches.Count);
 
                 }
+            }
+            else
+            {
+                // Might need to come back to this.
+                m_alarmController.OnConfirm();
             }
 
             return ServiceResult.Good;

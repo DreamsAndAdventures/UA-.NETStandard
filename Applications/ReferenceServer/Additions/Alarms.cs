@@ -118,7 +118,12 @@ namespace Quickstarts.ReferenceServer
                 {
                     interval = 1500;
                     intervalString = interval.ToString();
-                    //controllerType = Type.GetType("Quickstarts.ReferenceServer.AcknowledgeTestController");
+                }
+                else if (unitName == "Confirm")
+                {
+                    interval = 1000;
+                    intervalString = interval.ToString();
+                    controllerType = Type.GetType("Quickstarts.ReferenceServer.ConfirmTestAlarmController");
                 }
 
                 AlarmHolder ackAlarmType = new AcknowledgeableConditionTypeHolder(
@@ -128,7 +133,7 @@ namespace Quickstarts.ReferenceServer
                     GetSupportedAlarmConditionType( ref conditionTypeIndex ),
                     controllerType,
                     interval,
-                    optional: GetUseOptional( ref useOptional ) );
+                    optional: GetUseOptional(unitName, ref useOptional ) );
                 alarmMap.Add(ackAlarmType.MapName, ackAlarmType);
 
                 AlarmHolder alarmConditionType = new AlarmConditionTypeHolder(
@@ -138,7 +143,7 @@ namespace Quickstarts.ReferenceServer
                     GetSupportedAlarmConditionType( ref conditionTypeIndex ),
                     controllerType,
                     interval,
-                    optional: GetUseOptional(ref useOptional));
+                    optional: GetUseOptional(unitName, ref useOptional));
                 alarmMap.Add(alarmConditionType.MapName, alarmConditionType);
 
                 // Need to disable this until the AlarmHolder is updated.
@@ -159,7 +164,7 @@ namespace Quickstarts.ReferenceServer
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
                     controllerType,
                     interval,
-                    optional: GetUseOptional(ref useOptional));
+                    optional: GetUseOptional(unitName, ref useOptional));
                 alarmMap.Add(discrepancy.MapName, discrepancy);
 
                 AlarmHolder discrete = new DiscreteHolder(
@@ -169,7 +174,7 @@ namespace Quickstarts.ReferenceServer
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
                     controllerType,
                     interval,
-                    optional: GetUseOptional(ref useOptional));
+                    optional: GetUseOptional(unitName, ref useOptional));
                 alarmMap.Add(discrete.MapName, discrete);
 
                 AlarmHolder limit = new LimitAlarmTypeHolder(
@@ -179,7 +184,7 @@ namespace Quickstarts.ReferenceServer
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
                     controllerType,
                     interval,
-                    optional: GetUseOptional(ref useOptional));
+                    optional: GetUseOptional(unitName, ref useOptional));
                 alarmMap.Add(limit.MapName, limit);
 
                 AlarmHolder exclusiveLimit = new ExclusiveLimitHolder(
@@ -189,7 +194,7 @@ namespace Quickstarts.ReferenceServer
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
                     controllerType,
                     interval,
-                    optional: GetUseOptional(ref useOptional));
+                    optional: GetUseOptional(unitName, ref useOptional));
                 alarmMap.Add(exclusiveLimit.MapName, exclusiveLimit);
 
                 AlarmHolder exclusiveLevel = new ExclusiveLevelHolder(
@@ -199,7 +204,7 @@ namespace Quickstarts.ReferenceServer
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
                     controllerType,
                     interval,
-                    optional: GetUseOptional(ref useOptional));
+                    optional: GetUseOptional(unitName, ref useOptional));
                 alarmMap.Add(exclusiveLevel.MapName, exclusiveLevel);
 
                 AlarmHolder exclusiveRateOfChange = new ExclusiveRateOfChangeHolder(
@@ -209,7 +214,7 @@ namespace Quickstarts.ReferenceServer
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
                     controllerType,
                     interval,
-                    optional: GetUseOptional(ref useOptional));
+                    optional: GetUseOptional(unitName, ref useOptional));
                 alarmMap.Add(exclusiveRateOfChange.MapName, exclusiveRateOfChange);
 
                 AlarmHolder exclusiveDeviation = new ExclusiveDeviationHolder(
@@ -220,7 +225,7 @@ namespace Quickstarts.ReferenceServer
                     controllerType,
                     interval,
                     deviationSetpoint.NodeId,
-                    optional: GetUseOptional(ref useOptional));
+                    optional: GetUseOptional(unitName, ref useOptional));
                 alarmMap.Add(exclusiveDeviation.MapName, exclusiveDeviation);
 
                 AlarmHolder nonExclusiveLimit = new NonExclusiveLimitHolder(
@@ -230,7 +235,7 @@ namespace Quickstarts.ReferenceServer
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
                     controllerType,
                     interval,
-                    optional: GetUseOptional(ref useOptional));
+                    optional: GetUseOptional(unitName, ref useOptional));
                 alarmMap.Add(nonExclusiveLimit.MapName, nonExclusiveLimit);
 
                 AlarmHolder nonExclusiveLevel = new NonExclusiveLevelHolder(
@@ -240,7 +245,7 @@ namespace Quickstarts.ReferenceServer
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
                     controllerType,
                     interval,
-                    optional: GetUseOptional(ref useOptional));
+                    optional: GetUseOptional(unitName, ref useOptional));
                 alarmMap.Add(nonExclusiveLevel.MapName, nonExclusiveLevel);
 
                 AlarmHolder nonExclusiveRateOfChange = new NonExclusiveRateOfChangeHolder(
@@ -250,7 +255,7 @@ namespace Quickstarts.ReferenceServer
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
                     controllerType,
                     interval,
-                    optional: GetUseOptional(ref useOptional));
+                    optional: GetUseOptional(unitName, ref useOptional));
                 alarmMap.Add(nonExclusiveRateOfChange.MapName, nonExclusiveRateOfChange);
 
                 AlarmHolder nonExclusiveDeviation = new NonExclusiveDeviationHolder(
@@ -261,7 +266,7 @@ namespace Quickstarts.ReferenceServer
                     controllerType,
                     interval,
                     deviationSetpoint.NodeId,
-                    optional: GetUseOptional(ref useOptional));
+                    optional: GetUseOptional(unitName, ref useOptional));
                 alarmMap.Add(nonExclusiveDeviation.MapName, nonExclusiveDeviation);
 
                 Debug.WriteLine("Completed alarms for " + unitName);
@@ -283,10 +288,17 @@ namespace Quickstarts.ReferenceServer
             return conditionType;
         }
 
-        public bool GetUseOptional( ref bool optional )
+        public bool GetUseOptional(string unitName, ref bool optional )
         {
             bool returnValue = optional;
-            optional = !optional;
+            if (unitName == "Confirm")
+            {
+                returnValue = true;
+            }
+            else
+            {
+                optional = !optional;
+            }
             return returnValue;
         }
 

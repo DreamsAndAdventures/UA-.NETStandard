@@ -38,7 +38,7 @@ namespace Quickstarts.ReferenceServer
             m_allowChanges = false;
         }
 
-        public void Start()
+        public virtual void Start()
         {
             Stop();
 
@@ -47,7 +47,7 @@ namespace Quickstarts.ReferenceServer
             m_allowChanges = true;
         }
 
-        public void Stop()
+        public virtual void Stop()
         {
             m_value = 50;
 
@@ -181,6 +181,21 @@ namespace Quickstarts.ReferenceServer
         public virtual bool ShouldUnsuppress()
         {
             return false;
+        }
+
+        public virtual void OnAddComment()
+        {
+
+        }
+
+        public virtual void OnAcknowledge()
+        {
+
+        }
+
+        public virtual void OnConfirm()
+        {
+
         }
     }
 }

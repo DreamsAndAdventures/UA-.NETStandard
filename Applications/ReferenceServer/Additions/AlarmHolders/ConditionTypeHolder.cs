@@ -361,6 +361,9 @@ namespace Quickstarts.ReferenceServer
                 Debug.Print(m_mapName + " AddComment Unable to set comment " + comment.ToString());
             }
 
+
+            m_alarmController.OnAddComment();
+
             return ServiceResult.Good;
         }
 
