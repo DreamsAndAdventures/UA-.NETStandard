@@ -42,7 +42,7 @@ namespace Quickstarts.ReferenceServer
                 alarm.Time.Value = DateTime.UtcNow;
                 alarm.ReceiveTime.Value = alarm.Time.Value;
                 alarm.Message.Value = name + " Initialized";
-                alarm.Severity.Value = 0;
+                alarm.Severity.Value = Defines.INACTIVE_SEVERITY;
             }
         }
 

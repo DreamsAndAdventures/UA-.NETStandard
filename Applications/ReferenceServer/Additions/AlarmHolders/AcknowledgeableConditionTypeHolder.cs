@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 
 using Opc.Ua;
@@ -183,7 +184,15 @@ namespace Quickstarts.ReferenceServer
             AcknowledgeableConditionState alarm = null;
             bool branchEvent = false;
 
-            if (IsEvent(eventId))
+            string eventIdString = Utils.ToHexString(eventId);
+
+            if ( m_acked.Contains( eventIdString ))
+            {
+                LogError("OnAcknowledge", EventErrorMessage(eventId) + " already acknowledged");
+                return StatusCodes.BadConditionBranchAlreadyAcked;
+            }
+
+            if (IsEvent("OnAcknowledge", eventId))
             {
                 alarm = GetAlarm();
             }
@@ -199,9 +208,12 @@ namespace Quickstarts.ReferenceServer
 
             if (alarm == null)
             {
+                LogError("OnAcknowledge", EventErrorMessage(eventId));
                 return StatusCodes.BadEventIdUnknown;
             }
 
+            m_acked.Add(eventIdString);
+           
             if (alarm.AckedState.Id.Value)
             {
                 return StatusCodes.BadConditionBranchAlreadyAcked;
@@ -259,6 +271,7 @@ namespace Quickstarts.ReferenceServer
             }
             else
             {
+                m_delayedMessages.Add("OnAcknowledge");
                 // Might need to come back to this.
                 m_alarmController.OnAcknowledge();
             }
@@ -277,6 +290,15 @@ namespace Quickstarts.ReferenceServer
             {
                 return StatusCodes.BadMethodInvalid;
             }
+
+            string eventIdString = Utils.ToHexString(eventId);
+
+            if (m_confirmed.Contains(eventIdString))
+            {
+                LogError("OnAcknowledge", EventErrorMessage(eventId) + " already acknowledged");
+                return StatusCodes.BadConditionBranchAlreadyAcked;
+            }
+
 
             AcknowledgeableConditionState alarm = null;
             bool branchEvent = false;
@@ -297,8 +319,12 @@ namespace Quickstarts.ReferenceServer
 
             if (alarm == null)
             {
+                LogError("OnConfirm", EventErrorMessage(eventId));
+
                 return StatusCodes.BadEventIdUnknown;
             }
+
+            m_confirmed.Add(eventIdString);
 
             alarm.SetConfirmedState(SystemContext, confirmed: true);
             alarm.Message.Value = "User Confirmed Event " + DateTime.Now.ToShortTimeString();
@@ -330,12 +356,21 @@ namespace Quickstarts.ReferenceServer
             }
             else
             {
+                m_delayedMessages.Add("OnConfirm");
+
                 // Might need to come back to this.
                 m_alarmController.OnConfirm();
             }
 
             return ServiceResult.Good;
         }
+
+        #endregion
+
+        #region Private
+
+        protected HashSet<string> m_acked = new HashSet<string>();
+        protected HashSet<string> m_confirmed = new HashSet<string>();
 
         #endregion
 

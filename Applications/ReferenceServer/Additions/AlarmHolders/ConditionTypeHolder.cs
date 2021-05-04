@@ -53,7 +53,8 @@ namespace Quickstarts.ReferenceServer
 
             alarm.SetEnableState(SystemContext, true);
             alarm.Quality.Value = Opc.Ua.StatusCodes.Good;
-            alarm.LastSeverity.Value = 0;
+            alarm.LastSeverity.Value = Defines.INACTIVE_SEVERITY;
+            alarm.Severity.Value = Defines.INACTIVE_SEVERITY;
             alarm.Comment.Value = new LocalizedText("en", "");
 
             // Set Method Handlers
@@ -161,7 +162,7 @@ namespace Quickstarts.ReferenceServer
         {
             ConditionState alarm = GetAlarm();
 
-            if (ShouldEvent() || valueUpdated || message.Length > 0)
+            if (ShouldEvent() /*|| valueUpdated */ || message.Length > 0)
             {
                 CreateBranch();
 
@@ -210,6 +211,9 @@ namespace Quickstarts.ReferenceServer
                 alarm.Time.Value = DateTime.UtcNow;
                 alarm.ReceiveTime.Value = alarm.Time.Value;
 
+                Log( "ReportEvent", " Value " + m_alarmController.GetValue().ToString() +
+                    " Message " + alarm.Message.Value.Text );
+
                 alarm.ClearChangeMasks(SystemContext, true);
 
                 InstanceStateSnapshot eventSnapshot = new InstanceStateSnapshot();
@@ -222,9 +226,11 @@ namespace Quickstarts.ReferenceServer
         {
             ushort severity = Defines.INACTIVE_SEVERITY;
 
-            if (Analog)
-            {
-                int level = (int)m_trigger.Value;
+            int level = m_alarmController.GetValue();
+
+            //if (Analog)
+            //{
+            //    int level = (int)m_trigger.Value;
 
                 if (level <= Defines.LOWLOW_ALARM)
                 {
@@ -245,15 +251,15 @@ namespace Quickstarts.ReferenceServer
                 {
                     severity = Defines.HIGH_SEVERITY;
                 }
-            }
-            else
-            {
-                bool active = (bool)m_trigger.Value;
-                if ( active )
-                {
-                    severity = Defines.BOOL_SEVERITY;
-                }
-            }
+            //}
+            //else
+            //{
+            //    bool active = (bool)m_trigger.Value;
+            //    if ( active )
+            //    {
+            //        severity = Defines.BOOL_SEVERITY;
+            //    }
+            //}
 
             return severity;
         }
@@ -283,10 +289,13 @@ namespace Quickstarts.ReferenceServer
         {
             bool shouldEvent = false;
             ConditionState alarm = GetAlarm();
-            if (GetSeverity() != alarm.Severity.Value)
+            ushort newSeverity = GetSeverity();
+            ushort existingSeverity = alarm.Severity.Value;
+            if (newSeverity != alarm.Severity.Value)
             {
                 shouldEvent = true;
             }
+//            Log("ShouldEvent", "Current Severity " + existingSeverity.ToString() + " new severity " + newSeverity.ToString() + " should event " + shouldEvent.ToString());
             return shouldEvent;
         }
 
@@ -301,6 +310,26 @@ namespace Quickstarts.ReferenceServer
                 alarm = m_alarm;
             }
             return (ConditionState)alarm;
+        }
+
+
+
+        protected bool IsEvent(string caller, byte[] eventId)
+        {
+            bool isEvent = IsEvent( eventId );
+
+            if ( !isEvent )
+            {
+                ConditionState alarm = GetAlarm();
+                LogError(caller, EventErrorMessage(eventId));
+            }
+
+            return isEvent;
+        }
+
+        protected string EventErrorMessage(byte[] eventId)
+        {
+            return " Requested Event " + Utils.ToHexString(eventId);
         }
 
 
@@ -344,25 +373,33 @@ namespace Quickstarts.ReferenceServer
             byte[] eventId,
             LocalizedText comment)
         {
-            if (!IsEvent(eventId))
+            ConditionState alarm = GetAlarm();
+
+            if (!IsEvent("OnAddComment", eventId))
             {
+                alarm.Message.Value = "OnAddComment Unknown event id " + Utils.ToHexString(eventId);
+                LogError("OnAddComment", "Unknown event " + Utils.ToHexString(eventId));
                 return StatusCodes.BadEventIdUnknown;
             }
 
-            ConditionState alarm = GetAlarm();
 
             if (CanSetComment(comment))
             {
-                Debug.Print(m_mapName + " AddComment Setting Comment to " + comment.ToString());
+                alarm.Message.Value = "Can set comment \'" + comment.Text + "\' for event " + Utils.ToHexString(eventId);
+                Log("OnAddComment", "Can set comment \'" + comment.Text + "\' for event " + Utils.ToHexString(eventId));
                 alarm.Comment.Value = comment;
             }
             else
             {
-                Debug.Print(m_mapName + " AddComment Unable to set comment " + comment.ToString());
+                alarm.Message.Value = "Cannot set comment \'" + comment.Text + "\' for event " + Utils.ToHexString(eventId);
+                Log("OnAddComment", "Cannot set comment \'" + comment.Text + "\' for event " + Utils.ToHexString(eventId));
             }
 
-
             m_alarmController.OnAddComment();
+
+            // Can't do this.  Core will send the event.
+            // ReportEvent(alarm);
+            m_delayedMessages.Add("OnAddComment");
 
             return ServiceResult.Good;
         }

@@ -32,6 +32,7 @@ using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using Opc.Ua;
 using Opc.Ua.Server;
+using Serilog;
 
 namespace Quickstarts.ReferenceServer
 {
@@ -48,6 +49,11 @@ namespace Quickstarts.ReferenceServer
     /// </remarks>
     public partial class ReferenceServer : ReverseConnectServer
     {
+        public ReferenceServer(Serilog.Core.Logger logger)
+        {
+            m_logger = logger;
+        }
+
         #region Overridden Methods
         /// <summary>
         /// Creates the node managers for the server.
@@ -64,7 +70,7 @@ namespace Quickstarts.ReferenceServer
             List<INodeManager> nodeManagers = new List<INodeManager>();
 
             // create the custom node managers.
-            nodeManagers.Add(new ReferenceNodeManager(server, configuration));
+            nodeManagers.Add(new ReferenceNodeManager(server, configuration, m_logger));
 
             // create master node manager.
             return new MasterNodeManager(server, configuration, null, nodeManagers.ToArray());
@@ -347,6 +353,7 @@ namespace Quickstarts.ReferenceServer
 
         #region Private Fields
         private ICertificateValidator m_userCertificateValidator;
+        private Serilog.Core.Logger m_logger;
         #endregion
     }
 }

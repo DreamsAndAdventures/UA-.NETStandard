@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using Serilog;
+
 using Opc.Ua;
 
 namespace Quickstarts.ReferenceServer
@@ -147,8 +149,37 @@ namespace Quickstarts.ReferenceServer
 
         public virtual void Update()
         {
+            DelayedEvents();
             SetValue(m_alarmController.Update(SystemContext));
         }
+
+        public virtual void DelayedEvents()
+        {
+            // Method calls are done by the core.  Delayed events are expected events to be logged to file.
+            while( m_delayedMessages.Count > 0 )
+            {
+                string message = GetMessage("Delayed:" + m_delayedMessages[0], " Event Time: " + m_alarm.Time.Value.ToString());
+                Logger.Information(message);
+                m_delayedMessages.RemoveAt(0);
+            }
+        }
+
+        protected void Log(string caller, string message, BaseEventState alarm = null)
+        {
+            Logger.Information(GetMessage(caller, message));
+        }
+
+        protected void LogError(string caller, string message, BaseEventState alarm = null)
+        {
+            Logger.Error(GetMessage(caller, message));
+        }
+
+        protected string GetMessage(string caller, string message)
+        {
+            return caller + ": " + m_mapName + " EventId " +
+                Utils.ToHexString(m_alarm.EventId.Value) + " " + message;
+        }
+
 
         public virtual void SetValue(bool valueUpdated, string message = "")
         {
@@ -258,6 +289,11 @@ namespace Quickstarts.ReferenceServer
         public bool Optional
         {
             get { return m_optional; }
+        }
+
+        public Serilog.Core.Logger Logger
+        {
+            get { return GetNodeManager().m_logger; }
         }
 
         #endregion
@@ -394,7 +430,6 @@ namespace Quickstarts.ReferenceServer
             return nameSpaceIndex;
         }
 
-
         #endregion
 
         #region Private Fields
@@ -414,6 +449,7 @@ namespace Quickstarts.ReferenceServer
         protected uint m_alarmTypeIdentifier = 0;
         protected string m_alarmTypeName = "";
         protected SupportedAlarmConditionType m_alarmConditionType = null;
+        protected List<string> m_delayedMessages = new List<string>(); 
         #endregion
 
 

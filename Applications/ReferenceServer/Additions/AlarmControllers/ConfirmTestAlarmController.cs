@@ -52,7 +52,7 @@ namespace Quickstarts.ReferenceServer
             m_pause = false;
 
             m_nextTime = DateTime.Now;
-            m_nextTime = m_nextTime.AddMilliseconds(m_interval* 4);
+            m_nextTime = m_nextTime.AddMilliseconds(m_interval* 2);
         }
     }
 }

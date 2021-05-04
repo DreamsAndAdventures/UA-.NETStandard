@@ -36,6 +36,8 @@ using Opc.Ua;
 using Opc.Ua.Server;
 using Range = Opc.Ua.Range;
 
+using Serilog;
+
 namespace Quickstarts.ReferenceServer
 {
     /// <summary>
@@ -47,7 +49,7 @@ namespace Quickstarts.ReferenceServer
         /// <summary>
         /// Initializes the node manager.
         /// </summary>
-        public ReferenceNodeManager(IServerInternal server, ApplicationConfiguration configuration)
+        public ReferenceNodeManager(IServerInternal server, ApplicationConfiguration configuration, Serilog.Core.Logger logger)
             : base(server, configuration, Namespaces.ReferenceApplications)
         {
             SystemContext.NodeIdFactory = this;
@@ -62,6 +64,8 @@ namespace Quickstarts.ReferenceServer
             }
 
             m_dynamicNodes = new List<BaseDataVariableState>();
+
+            m_logger = logger;
         }
         #endregion
 
@@ -2768,6 +2772,7 @@ namespace Quickstarts.ReferenceServer
 
         #region Archie
         private Alarms m_alarms = null;
+        public Serilog.Core.Logger m_logger;
 
         public void PublicAddPredefinedNode( NodeState nodeState)
         {

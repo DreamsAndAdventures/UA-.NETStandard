@@ -18,6 +18,7 @@ namespace Quickstarts.ReferenceServer
         protected int m_value = 0;
         protected bool m_increment = true;
         protected DateTime m_nextTime = DateTime.Now;
+        protected DateTime m_stopTime = DateTime.Now;
         protected int m_interval = 0;
         protected bool m_isBoolean = false;
         protected bool m_allowChanges = false;
@@ -34,6 +35,7 @@ namespace Quickstarts.ReferenceServer
             m_increment = true;
 
             m_value = 50;
+            m_stopTime = m_stopTime.AddYears(5);
 
             m_allowChanges = false;
         }
@@ -43,6 +45,9 @@ namespace Quickstarts.ReferenceServer
             Stop();
 
             m_nextTime = DateTime.Now;
+            m_stopTime = DateTime.Now;
+            m_stopTime = m_stopTime.AddMinutes(3);
+
 
             m_allowChanges = true;
         }
@@ -50,7 +55,7 @@ namespace Quickstarts.ReferenceServer
         public virtual void Stop()
         {
             m_value = 50;
-
+            m_increment = true;
             m_allowChanges = false;
 
             m_reset = true;
@@ -97,7 +102,13 @@ namespace Quickstarts.ReferenceServer
         {
             bool setValue = false;
 
-            if (m_allowChanges || m_reset)
+            if ( DateTime.Now > m_stopTime )
+            {
+                Stop();
+                m_stopTime = DateTime.Now;
+                m_stopTime = m_stopTime.AddYears(5);
+            }
+            else if (m_allowChanges || m_reset)
             {
                 m_reset = false;
 
@@ -152,7 +163,7 @@ namespace Quickstarts.ReferenceServer
 
             intValue = m_value;
             boolValue = false;
-            if (m_value > 50)
+            if (m_value >= 70 || m_value <= 30 )
             {
                 boolValue = true;
             }

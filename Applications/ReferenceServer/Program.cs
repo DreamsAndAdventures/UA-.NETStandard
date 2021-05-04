@@ -60,14 +60,17 @@ namespace Quickstarts.ReferenceServer
                 ApplicationConfiguration config = application.LoadApplicationConfiguration(false).Result;
 
                 LoggerConfiguration loggerConfiguration = new LoggerConfiguration();
-                Serilog.Events.LogEventLevel level = Serilog.Events.LogEventLevel.Fatal;
+//                Serilog.Events.LogEventLevel level = Serilog.Events.LogEventLevel.Fatal;
+                loggerConfiguration.WriteTo.File(@"e:\serverLog.txt", Serilog.Events.LogEventLevel.Verbose);
+
 #if DEBUG
-//                loggerConfiguration.WriteTo.Debug(restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Warning);
+                // loggerConfiguration.WriteTo.Debug(restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Warning);
                 loggerConfiguration.WriteTo.Debug(restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Verbose);
-                level = Serilog.Events.LogEventLevel.Verbose;
                 config.TraceConfiguration.TraceMasks = Utils.TraceMasks.Operation;
 #endif
-                SerilogTraceLogger.Create(loggerConfiguration, config, level);
+//                SerilogTraceLogger.Create(loggerConfiguration, config, level);
+                Serilog.Core.Logger logger = loggerConfiguration.CreateLogger();
+               
 
                 // check the application certificate.
                 bool certOk = application.CheckApplicationInstanceCertificate(false, 0).Result;
@@ -77,7 +80,7 @@ namespace Quickstarts.ReferenceServer
                 }
 
                 // start the server.
-                application.Start(new ReferenceServer()).Wait();
+                application.Start(new ReferenceServer(logger)).Wait();
 
                 // check whether the invalid certificates dialog should be displayed.
                 bool showCertificateValidationDialog = false;

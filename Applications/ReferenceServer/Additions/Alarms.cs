@@ -119,7 +119,7 @@ namespace Quickstarts.ReferenceServer
                     interval = 1500;
                     intervalString = interval.ToString();
                 }
-                else if (unitName == "Confirm")
+                else if (unitName == "Confirm" || unitName == "Comment" )
                 {
                     interval = 1000;
                     intervalString = interval.ToString();
@@ -294,6 +294,10 @@ namespace Quickstarts.ReferenceServer
             if (unitName == "Confirm")
             {
                 returnValue = true;
+            }
+            else if ( unitName == "Acknowledge" )
+            {
+                returnValue = false;
             }
             else
             {
@@ -1136,6 +1140,8 @@ namespace Quickstarts.ReferenceServer
             }
             if ( alarms != null )
             {
+                GetNodeManager().m_logger.Information("Starting up alarm group " + GetUnitFromNodeId(node.NodeId));
+
                 lock (m_alarms)
                 {
                     foreach (AlarmHolder alarmHolder in alarms.Values)
@@ -1144,6 +1150,7 @@ namespace Quickstarts.ReferenceServer
                     }
                 }
             }
+
            
             return result;
         }

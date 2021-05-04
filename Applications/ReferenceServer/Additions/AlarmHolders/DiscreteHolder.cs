@@ -24,6 +24,7 @@ namespace Quickstarts.ReferenceServer
             bool create = true) :
             base(alarms, parent, name, alarmConditionType, controllerType, interval, optional, maxShelveTime, false)
         {
+            Logger.Information(name + " Discrete Constructor Optional = " + optional.ToString());
             if (create)
             {
                 Initialize(Opc.Ua.ObjectTypes.DiscreteAlarmType, name, maxShelveTime);
