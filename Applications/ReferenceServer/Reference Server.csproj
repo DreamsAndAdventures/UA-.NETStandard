@@ -108,6 +108,7 @@
     <Compile Include="Additions\Defines.cs" />
     <Compile Include="Additions\DerivedAlarmTypes\DerivedSystemOffNormalAlarmType.cs" />
     <Compile Include="Additions\Helpers.cs" />
+    <Compile Include="Additions\SourceController.cs" />
     <Compile Include="Additions\SupportedAlarmConditionType.cs" />
     <Compile Include="Additions\AlarmControllers\SuppressAlarmController.cs" />
     <Compile Include="MonitoredItemEventLogDlg.cs">

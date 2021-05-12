@@ -13,13 +13,14 @@ namespace Quickstarts.ReferenceServer
         public AcknowledgeableConditionTypeHolder(
             Alarms alarms,
             FolderState parent,
+            SourceController trigger,
             string name,
             SupportedAlarmConditionType alarmConditionType,
             Type controllerType,
             int interval,
             bool optional = true,
             bool create = true) :
-            base(alarms, parent, name, alarmConditionType, controllerType, interval, optional)
+            base(alarms, parent, trigger, name, alarmConditionType, controllerType, interval, optional)
         {
             if (create)
             {
@@ -100,7 +101,7 @@ namespace Quickstarts.ReferenceServer
 
         #region Overrides 
 
-        public override void SetValue(bool valueUpdated, string message = "")
+        public override void SetValue(string message = "")
         {
             bool requiresUpdate = false;
 
@@ -119,9 +120,9 @@ namespace Quickstarts.ReferenceServer
                 }
             }
 
-            if (requiresUpdate || valueUpdated)
+            if (requiresUpdate)
             {
-                base.SetValue(valueUpdated, message);
+                base.SetValue(message);
             }
         }
 

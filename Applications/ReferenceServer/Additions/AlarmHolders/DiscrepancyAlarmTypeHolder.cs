@@ -16,6 +16,7 @@ namespace Quickstarts.ReferenceServer
         public DiscrepancyAlarmTypeHolder(
             Alarms alarms,
             FolderState parent,
+            SourceController trigger,
             string name,
             SupportedAlarmConditionType alarmConditionType,
             Type controllerType,
@@ -23,7 +24,7 @@ namespace Quickstarts.ReferenceServer
             bool optional = true,
             double maxShelveTime = Defines.NORMAL_MAX_TIME_SHELVED,
             bool create = true) :
-            base(alarms, parent, name, alarmConditionType, controllerType, interval, optional, maxShelveTime, false)
+            base(alarms, parent, trigger, name, alarmConditionType, controllerType, interval, optional, maxShelveTime, false)
         {
             if (create)
             {
@@ -74,24 +75,21 @@ namespace Quickstarts.ReferenceServer
 
         #region Overrides
 
-        public override void SetValue(bool valueUpdated, string message = "")
+        public override void SetValue(string message = "")
         {
-            if (valueUpdated)
+            BaseDataVariableState target = (BaseDataVariableState)GetTargetValueNodeState();
+            int value = m_alarmController.GetValue();
+
+            int newValue = value;
+            if (IsActive())
             {
-                BaseDataVariableState target = (BaseDataVariableState)GetTargetValueNodeState();
-                int value = m_alarmController.GetValue();
-
-                int newValue = value;
-                if (IsActive())
-                {
-                    newValue = value + 100;
-                }
-                target.Value = newValue;
-                target.Timestamp = DateTime.UtcNow;
-                target.ClearChangeMasks(SystemContext, false);
-
-                base.SetValue(true, message);
+                newValue = value + 100;
             }
+            target.Value = newValue;
+            target.Timestamp = DateTime.UtcNow;
+            target.ClearChangeMasks(SystemContext, false);
+
+            base.SetValue(message);
         }
 
         #endregion

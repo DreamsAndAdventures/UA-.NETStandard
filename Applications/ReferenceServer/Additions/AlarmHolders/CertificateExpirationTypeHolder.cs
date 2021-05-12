@@ -15,6 +15,7 @@ namespace Quickstarts.ReferenceServer
         public CertificateExpirationTypeHolder(
             Alarms alarms,
             FolderState parent,
+            SourceController trigger,
             string name,
             SupportedAlarmConditionType alarmConditionType,
             Type controllerType,
@@ -22,7 +23,7 @@ namespace Quickstarts.ReferenceServer
             bool optional = true,
             double maxShelveTime = Defines.NORMAL_MAX_TIME_SHELVED,
             bool create = true) :
-            base(alarms, parent, name, alarmConditionType, controllerType, interval, optional, maxShelveTime, false)
+            base(alarms, parent, trigger, name, alarmConditionType, controllerType, interval, optional, maxShelveTime, false)
         {
             m_name = name;
 
@@ -56,7 +57,7 @@ namespace Quickstarts.ReferenceServer
             Reset( trigger: false );
         }
 
-        public override void SetValue(bool valueUpdated, string message = "")
+        public override void SetValue(string message = "")
         {
             CertificateExpirationAlarmState alarm = GetAlarm();
 
@@ -71,7 +72,7 @@ namespace Quickstarts.ReferenceServer
                 expires = expires.AddMilliseconds(-limit);
                 if (expires.CompareTo(DateTime.UtcNow) < 0)
                 {
-                    base.SetValue(valueUpdated, GetAlarmMessage());
+                    base.SetValue(GetAlarmMessage());
                 }
             }
         }
@@ -138,12 +139,13 @@ namespace Quickstarts.ReferenceServer
                 if (triggerActive)
                 {
                     // Toggle the value back down
-                    Update();
+                    // TODO
+                    //Update();
                 }
 
                 if (alarm.ActiveState.Id.Value)
                 {
-                    base.SetValue(true, "Certificate Expiration has been reset");
+                    base.SetValue("Certificate Expiration has been reset");
                 }
                 else
                 {

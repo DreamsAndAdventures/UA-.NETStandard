@@ -16,12 +16,13 @@ namespace Quickstarts.ReferenceServer
         protected ConditionTypeHolder(
             Alarms alarms,
             FolderState parent,
+            SourceController trigger,
             string name,
             SupportedAlarmConditionType alarmConditionType,
             Type controllerType,
             int interval,
             bool optional) :
-            base( alarms, parent, name, alarmConditionType, controllerType, interval, optional )
+            base( alarms, parent, trigger, name, alarmConditionType, controllerType, interval, optional )
         {
             m_alarmConditionType = alarmConditionType;
         }
@@ -158,11 +159,11 @@ namespace Quickstarts.ReferenceServer
 
         #region Overrides
 
-        public override void SetValue(bool valueUpdated, string message = "")
+        public override void SetValue(string message = "")
         {
             ConditionState alarm = GetAlarm();
 
-            if (ShouldEvent() /*|| valueUpdated */ || message.Length > 0)
+            if (ShouldEvent() || message.Length > 0)
             {
                 CreateBranch();
 
@@ -228,38 +229,25 @@ namespace Quickstarts.ReferenceServer
 
             int level = m_alarmController.GetValue();
 
-            //if (Analog)
-            //{
-            //    int level = (int)m_trigger.Value;
-
-                if (level <= Defines.LOWLOW_ALARM)
-                {
-                    severity = Defines.LOWLOW_SEVERITY;
-                }
-                // Level is Low
-                else if (level <= Defines.LOW_ALARM)
-                {
-                    severity = Defines.LOW_SEVERITY;
-                }
-                // Level is HighHigh
-                else if (level >= Defines.HIGHHIGH_ALARM)
-                {
-                    severity = Defines.HIGHHIGH_SEVERITY;
-                }
-                // Level is High
-                else if (level >= Defines.HIGH_ALARM)
-                {
-                    severity = Defines.HIGH_SEVERITY;
-                }
-            //}
-            //else
-            //{
-            //    bool active = (bool)m_trigger.Value;
-            //    if ( active )
-            //    {
-            //        severity = Defines.BOOL_SEVERITY;
-            //    }
-            //}
+            if (level <= Defines.LOWLOW_ALARM && Analog)
+            {
+                severity = Defines.LOWLOW_SEVERITY;
+            }
+            // Level is Low
+            else if (level <= Defines.LOW_ALARM)
+            {
+                severity = Defines.LOW_SEVERITY;
+            }
+            // Level is HighHigh
+            else if (level >= Defines.HIGHHIGH_ALARM && Analog )
+            {
+                severity = Defines.HIGHHIGH_SEVERITY;
+            }
+            // Level is High
+            else if (level >= Defines.HIGH_ALARM)
+            {
+                severity = Defines.HIGH_SEVERITY;
+            }
 
             return severity;
         }

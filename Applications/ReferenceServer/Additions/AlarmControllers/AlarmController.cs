@@ -98,7 +98,7 @@ namespace Quickstarts.ReferenceServer
             m_nextTime = m_nextTime.AddMilliseconds(m_interval);
         }
 
-        protected virtual bool CanSetValue()
+        public virtual bool CanSetValue()
         {
             bool setValue = false;
 
@@ -144,9 +144,14 @@ namespace Quickstarts.ReferenceServer
 
         protected void TypicalGetValue(int minValue, int maxValue, ref int intValue, ref bool boolValue)
         {
+            int incrementValue = 5;
+            if (m_isBoolean)
+            {
+                incrementValue = 10;
+            }
             if (m_increment)
             {
-                m_value += 5;
+                m_value += incrementValue;
                 if (m_value == maxValue)
                 {
                     m_increment = false;
@@ -154,7 +159,7 @@ namespace Quickstarts.ReferenceServer
             }
             else
             {
-                m_value -= 5;
+                m_value -= incrementValue;
                 if (m_value == minValue)
                 {
                     m_increment = true;

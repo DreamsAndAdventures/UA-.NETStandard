@@ -13,12 +13,13 @@ namespace Quickstarts.ReferenceServer
 {
     public class AlarmHolder
     {
-        public AlarmHolder(Alarms alarms, FolderState parent, Type controllerType, int interval)
+        public AlarmHolder(Alarms alarms, FolderState parent, SourceController trigger, Type controllerType, int interval)
         {
             m_alarms = alarms;
             m_parent = parent;
+            m_trigger = trigger.Source;
+            m_alarmController = trigger.Controller;
             m_alarmControllerType = controllerType;
-            m_alarmController = null;
             m_interval = interval;
             m_branches = new Dictionary<string, BaseEventState>();
         }
@@ -111,11 +112,8 @@ namespace Quickstarts.ReferenceServer
 
             if (!isBranch)
             {
-                m_trigger = Helpers.CreateVariable(m_parent, NamespaceIndex, triggerNodeId, TriggerName, !Analog);
-                m_trigger.OnWriteValue = OnWriteAlarmTrigger;
-
+                m_trigger.AddReference(ReferenceTypes.HasCondition, false, m_alarm.NodeId);
                 m_parent.AddChild(alarm);
-                m_alarmController = (AlarmController)Activator.CreateInstance(m_alarmControllerType, m_trigger, m_interval, !Analog);
             }
 
         }
@@ -147,11 +145,15 @@ namespace Quickstarts.ReferenceServer
             return nodeIdString;
         }
 
-        public virtual void Update()
+        public virtual void Update(bool updated)
         {
             DelayedEvents();
-            SetValue(m_alarmController.Update(SystemContext));
+            if ( updated )
+            {
+                SetValue();
+            }
         }
+
 
         public virtual void DelayedEvents()
         {
@@ -181,7 +183,7 @@ namespace Quickstarts.ReferenceServer
         }
 
 
-        public virtual void SetValue(bool valueUpdated, string message = "")
+        public virtual void SetValue(string message = "")
         {
             Debug.WriteLine("AlarmHolder.SetValue() - Should not be called");
         }
@@ -229,7 +231,7 @@ namespace Quickstarts.ReferenceServer
             if (Trigger.Value != value)
             {
                 Trigger.Value = value;
-                SetValue(true, "Manual Write to trigger " + value.ToString());
+                SetValue("Manual Write to trigger " + value.ToString());
             }
 
 
@@ -280,6 +282,12 @@ namespace Quickstarts.ReferenceServer
         public string AlarmName
         {
             get { return m_alarmRootName + Defines.ALARM_EXTENSION; }
+        }
+
+        public string AlarmNodeName
+        {
+            get { return m_alarm.NodeId.ToString(); }
+//            get { return m_alarmRootName + Defines.ALARM_EXTENSION; }
         }
 
         public bool Analog

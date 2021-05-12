@@ -15,7 +15,7 @@ namespace Quickstarts.ReferenceServer
         {
         }
 
-        protected override bool CanSetValue()
+        public override bool CanSetValue()
         {
             return true;
         }

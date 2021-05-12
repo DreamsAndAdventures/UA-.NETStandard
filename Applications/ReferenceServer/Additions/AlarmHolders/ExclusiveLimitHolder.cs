@@ -14,6 +14,7 @@ namespace Quickstarts.ReferenceServer
         public ExclusiveLimitHolder(
             Alarms alarms,
             FolderState parent,
+            SourceController trigger,
             string name,
             SupportedAlarmConditionType alarmConditionType,
             Type controllerType,
@@ -21,7 +22,7 @@ namespace Quickstarts.ReferenceServer
             bool optional = true,
             double maxShelveTime = Defines.NORMAL_MAX_TIME_SHELVED,
             bool create = true) :
-            base(alarms, parent, name, alarmConditionType, controllerType, interval, optional, maxShelveTime, false)
+            base(alarms, parent, trigger, name, alarmConditionType, controllerType, interval, optional, maxShelveTime, false)
         {
             if (create)
             {
@@ -52,45 +53,42 @@ namespace Quickstarts.ReferenceServer
             alarm.SetLimitState(SystemContext, LimitAlarmStates.Inactive);
         }
 
-        public override void SetValue(bool valueUpdated, string message = "")
+        public override void SetValue(string message = "")
         {
-            if (valueUpdated)
+            ExclusiveLimitAlarmState alarm = GetAlarm();
+            int newSeverity = GetSeverity();
+            int currentSeverity = alarm.Severity.Value;
+
+            if (newSeverity != currentSeverity)
             {
-                ExclusiveLimitAlarmState alarm = GetAlarm();
-                int newSeverity = GetSeverity();
-                int currentSeverity = alarm.Severity.Value;
+                bool setState = true;
 
-                if (newSeverity != currentSeverity)
+                LimitAlarmStates state = LimitAlarmStates.Inactive;
+
+                if (newSeverity == Defines.HIGHHIGH_SEVERITY)
                 {
-                    bool setState = true;
-
-                    LimitAlarmStates state = LimitAlarmStates.Inactive;
-
-                    if (newSeverity == Defines.HIGHHIGH_SEVERITY)
+                    state = LimitAlarmStates.HighHigh;
+                }
+                else if (newSeverity == Defines.HIGH_SEVERITY)
+                {
+                    state = LimitAlarmStates.High;
+                }
+                else if( Optional )
+                {
+                    if (newSeverity == Defines.LOW_SEVERITY)
                     {
-                        state = LimitAlarmStates.HighHigh;
+                        state = LimitAlarmStates.Low;
                     }
-                    else if (newSeverity == Defines.HIGH_SEVERITY)
+                    else if ( newSeverity == Defines.LOWLOW_SEVERITY )
                     {
-                        state = LimitAlarmStates.High;
+                        state = LimitAlarmStates.LowLow;
                     }
-                    else if( Optional )
-                    {
-                        if (newSeverity == Defines.LOW_SEVERITY)
-                        {
-                            state = LimitAlarmStates.Low;
-                        }
-                        else if ( newSeverity == Defines.LOWLOW_SEVERITY )
-                        {
-                            state = LimitAlarmStates.LowLow;
-                        }
-                    }
-
-                    alarm.SetLimitState(SystemContext, state);
                 }
 
-                base.SetValue(valueUpdated, message);
+                alarm.SetLimitState(SystemContext, state);
             }
+
+            base.SetValue();
         }
 
         private ExclusiveLimitAlarmState GetAlarm()

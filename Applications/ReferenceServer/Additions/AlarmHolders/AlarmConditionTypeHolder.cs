@@ -14,6 +14,7 @@ namespace Quickstarts.ReferenceServer
         public AlarmConditionTypeHolder(
             Alarms alarms,
             FolderState parent,
+            SourceController trigger,
             string name,
             SupportedAlarmConditionType alarmConditionType,
             Type controllerType,
@@ -21,7 +22,7 @@ namespace Quickstarts.ReferenceServer
             bool optional = true,
             double maxShelveTime = Defines.NORMAL_MAX_TIME_SHELVED,
             bool create = true) :
-            base(alarms, parent, name, alarmConditionType, controllerType, interval, optional, false)
+            base(alarms, parent, trigger, name, alarmConditionType, controllerType, interval, optional, false)
         {
             if (create)
             {
@@ -164,7 +165,7 @@ namespace Quickstarts.ReferenceServer
 
         #region Overrides
 
-        public override void SetValue(bool valueUpdated, string message = "")
+        public override void SetValue(string message = "")
         {
             bool setValue = false;
             if (ShouldEvent())
@@ -182,7 +183,7 @@ namespace Quickstarts.ReferenceServer
 
             if (setValue)
             {
-                base.SetValue(true, message);
+                base.SetValue(message);
             }
         }
 
@@ -315,7 +316,7 @@ namespace Quickstarts.ReferenceServer
             alarm.Message.Value = "The timed shelving period expired.";
             alarm.SetShelvingState(context, false, false, 0);
 
-            base.SetValue(true, alarm.Message.Value.Text );
+            base.SetValue(alarm.Message.Value.Text );
 
             return ServiceResult.Good;
         }

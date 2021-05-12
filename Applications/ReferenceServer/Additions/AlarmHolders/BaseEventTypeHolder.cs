@@ -12,12 +12,13 @@ namespace Quickstarts.ReferenceServer
         protected BaseEventTypeHolder(
             Alarms alarms,
             FolderState parent,
+            SourceController trigger,
             string name,
             SupportedAlarmConditionType alarmConditionType,
             Type controllerType,
             int interval,
             bool optional) :
-            base(alarms, parent, controllerType, interval)
+            base(alarms, parent, trigger, controllerType, interval)
         {
             m_optional = optional;
         }
@@ -67,7 +68,7 @@ namespace Quickstarts.ReferenceServer
 
         #region Overrides
 
-        public override void SetValue(bool valueUpdated, string message = "")
+        public override void SetValue(string message = "")
         {
             
         }

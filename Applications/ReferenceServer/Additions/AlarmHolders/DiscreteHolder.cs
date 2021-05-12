@@ -15,6 +15,7 @@ namespace Quickstarts.ReferenceServer
         public DiscreteHolder(
             Alarms alarms,
             FolderState parent,
+            SourceController trigger,
             string name,
             SupportedAlarmConditionType alarmConditionType,
             Type controllerType,
@@ -22,7 +23,7 @@ namespace Quickstarts.ReferenceServer
             bool optional = true,
             double maxShelveTime = Defines.NORMAL_MAX_TIME_SHELVED,
             bool create = true) :
-            base(alarms, parent, name, alarmConditionType, controllerType, interval, optional, maxShelveTime, false)
+            base(alarms, parent, trigger, name, alarmConditionType, controllerType, interval, optional, maxShelveTime, false)
         {
             Logger.Information(name + " Discrete Constructor Optional = " + optional.ToString());
             if (create)
@@ -49,31 +50,29 @@ namespace Quickstarts.ReferenceServer
 
         #region Overrides
 
-        public override void SetValue(bool valueUpdated, string message = "")
+        public override void SetValue(string message = "")
         {
 
-            if (valueUpdated)
+            DiscreteAlarmState alarm = GetAlarm();
+            bool active = m_alarmController.IsBooleanActive();
+            int value = m_alarmController.GetValue();
+            if (this.GetType().Name == "DiscreteHolder")
             {
-                DiscreteAlarmState alarm = GetAlarm();
-                bool active = m_alarmController.IsBooleanActive();
-                int value = m_alarmController.GetValue();
-                if (this.GetType().Name == "DiscreteHolder")
+                // Now Invalid
+                if ( value > 50 )
                 {
-                    if ( value > 50 )
-                    {
-                        bool waiting = true;
-
-                    }
-                    else
-                    {
-                        bool waiting = true;
-
-                    }
-
+                    bool waiting = true;
 
                 }
-                base.SetValue(true, message);
+                else
+                {
+                    bool waiting = true;
+
+                }
+
+
             }
+            base.SetValue(message);
         }
 
         #endregion

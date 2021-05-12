@@ -24,7 +24,7 @@ namespace Quickstarts.ReferenceServer
             m_pause = false;
         }
 
-        protected override bool CanSetValue()
+        public override bool CanSetValue()
         {
             bool canSetValue = false;
 
