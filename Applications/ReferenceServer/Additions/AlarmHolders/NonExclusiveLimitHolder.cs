@@ -59,37 +59,69 @@ namespace Quickstarts.ReferenceServer
 
         }
 
+        protected override ushort GetSeverity()
+        {
+            ushort severity = Defines.INACTIVE_SEVERITY;
+
+            if (Optional)
+            {
+                severity = base.GetSeverity();
+            }
+            else
+            {
+                int level = m_alarmController.GetValue();
+
+                if (level >= Defines.HIGH_ALARM && Analog)
+                {
+                    severity = Defines.HIGH_SEVERITY;
+                }
+            }
+
+            return severity;
+        }
+
+
         public override void SetValue(string message = "")
         {
             NonExclusiveLimitAlarmState alarm = GetAlarm();
             int newSeverity = GetSeverity();
             int currentSeverity = alarm.Severity.Value;
 
-            LimitAlarmStates state = LimitAlarmStates.Inactive;
+            if (newSeverity != currentSeverity)
+            {
+                LimitAlarmStates state = LimitAlarmStates.Inactive;
 
-            if (newSeverity == Defines.HIGHHIGH_SEVERITY)
-            {
-                state = LimitAlarmStates.HighHigh;
-            }
-            else if (newSeverity == Defines.HIGH_SEVERITY )
-            {
-                state = LimitAlarmStates.High;
-            }
-            else if( Optional )
-            {
-                if (newSeverity == Defines.LOWLOW_SEVERITY)
+                if (Optional)
                 {
-                    state = LimitAlarmStates.LowLow;
+                    if (newSeverity == Defines.HIGHHIGH_SEVERITY)
+                    {
+                        state = LimitAlarmStates.HighHigh;
+                    }
+                    else if (newSeverity == Defines.HIGH_SEVERITY)
+                    {
+                        state = LimitAlarmStates.High;
+                    }
+                    else if (newSeverity == Defines.LOW_SEVERITY)
+                    {
+                        state = LimitAlarmStates.Low;
+                    }
+                    else if (newSeverity == Defines.LOWLOW_SEVERITY)
+                    {
+                        state = LimitAlarmStates.LowLow;
+                    }
                 }
-                else if (newSeverity == Defines.LOW_SEVERITY)
+                else
                 {
-                    state = LimitAlarmStates.Low;
+                    if (newSeverity == Defines.HIGH_SEVERITY || newSeverity == Defines.HIGHHIGH_SEVERITY)
+                    {
+                        state = LimitAlarmStates.High;
+                    }
                 }
+
+                alarm.SetLimitState(SystemContext, state);
             }
 
-            alarm.SetLimitState(SystemContext, state);
-
-            base.SetValue(message);
+            base.SetValue();
         }
 
         private NonExclusiveLimitAlarmState GetAlarm()

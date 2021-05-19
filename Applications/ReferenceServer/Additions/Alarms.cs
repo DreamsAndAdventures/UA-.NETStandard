@@ -25,9 +25,9 @@ namespace Quickstarts.ReferenceServer
         private ReferenceNodeManager m_nodeManager;
         private ushort NameSpaceIndex = 0;
         Dictionary<string, AlarmHolder> m_alarms = new Dictionary<string, AlarmHolder>();
-//        Dictionary<string, Dictionary<string, AlarmHolder>> m_alarmMap = new Dictionary<string, Dictionary<string, AlarmHolder>>();
-        Dictionary<string, Dictionary<string, SourceController>> m_triggerMap = new Dictionary<string, Dictionary<string, SourceController>>();
 
+        Dictionary<string, Dictionary<string, SourceController>> m_triggerMap =
+            new Dictionary<string, Dictionary<string, SourceController>>();
 
         CertificateExpirationTypeHolder m_expired = null;
         CertificateExpirationTypeHolder m_inside = null;

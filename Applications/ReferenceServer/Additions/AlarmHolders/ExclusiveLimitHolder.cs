@@ -83,8 +83,6 @@ namespace Quickstarts.ReferenceServer
 
             if (newSeverity != currentSeverity)
             {
-                bool setState = true;
-
                 LimitAlarmStates state = LimitAlarmStates.Inactive;
 
                 if ( Optional )
