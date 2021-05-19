@@ -27,6 +27,8 @@
  * http://opcfoundation.org/License/MIT/1.00/
  * ======================================================================*/
 
+//#define ARCHIE_ENABLE_CONTENT
+
 using System;
 using System.Collections.Generic;
 using System.Xml;
@@ -213,6 +215,7 @@ namespace Quickstarts.ReferenceServer
                     m_alarms.CreateAlarms(root);
 
                     #endregion
+#if ARCHIE_ENABLE_CONTENT
 
                     #region Scalar_Static
                     FolderState scalarFolder = CreateFolder(root, "Scalar", "Scalar");
@@ -1101,7 +1104,7 @@ namespace Quickstarts.ReferenceServer
                     outputMethod.OnCallMethod = new GenericMethodCalledEventHandler(OnOutputCall);
                     #endregion
                     #endregion
-
+#endif
                     #region Views
                     FolderState viewsFolder = CreateFolder(root, "Views", "Views");
                     const string views = "Views_";
@@ -1109,6 +1112,8 @@ namespace Quickstarts.ReferenceServer
                     ViewState viewStateOperations = CreateView(viewsFolder, externalReferences, views + "Operations", "Operations");
                     ViewState viewStateEngineering = CreateView(viewsFolder, externalReferences, views + "Engineering", "Engineering");
                     #endregion
+
+#if ARCHIE_ENABLE_CONTENT
 
                     #region Locales
                     FolderState localesFolder = CreateFolder(root, "Locales", "Locales");
@@ -1440,6 +1445,7 @@ namespace Quickstarts.ReferenceServer
                     myCompanyInstructions.Value = "A place for the vendor to describe their address-space.";
                     variables.Add(myCompanyInstructions);
                     #endregion
+#endif
                 }
                 catch (Exception e)
                 {
@@ -2791,16 +2797,52 @@ namespace Quickstarts.ReferenceServer
             ServerSystemContext systemContext = SystemContext.Copy(context);
             IDictionary<NodeId, NodeState> operationCache = new NodeIdDictionary<NodeState>();
 
+            bool didRefresh = false; 
+
             for (int ii = 0; ii < methodsToCall.Count; ii++)
             {
                 CallMethodRequest methodToCall = methodsToCall[ii];
 
-                // Need to try to capture any calls to ConditionType::Acknowledge
-                if (methodToCall.ObjectId.Equals(Opc.Ua.ObjectTypeIds.ConditionType) &&
-                    methodToCall.MethodId.Equals(Opc.Ua.MethodIds.AcknowledgeableConditionType_Acknowledge))
+                bool refreshMethod = methodToCall.MethodId.Equals(Opc.Ua.MethodIds.ConditionType_ConditionRefresh) ||
+                    methodToCall.MethodId.Equals(Opc.Ua.MethodIds.ConditionType_ConditionRefresh2);
+
+                if (refreshMethod)
                 {
+                    if (didRefresh)
+                    {
+                        errors[ii] = StatusCodes.BadRefreshInProgress;
+                        methodToCall.Processed = true;
+                        continue;
+                    }
+                    else
+                    {
+                        didRefresh = true;
+                    }
+                }
+
+                bool ackMethod = methodToCall.MethodId.Equals(Opc.Ua.MethodIds.AcknowledgeableConditionType_Acknowledge);
+                bool confirmMethod = methodToCall.MethodId.Equals(Opc.Ua.MethodIds.AcknowledgeableConditionType_Confirm);
+                bool commentMethod = methodToCall.MethodId.Equals(Opc.Ua.MethodIds.ConditionType_AddComment);
+                bool ackConfirmMethod = ackMethod || confirmMethod;//|| commentMethod;
+
+                if ( commentMethod )
+                {
+                    m_logger.Information("Waiting");
+                }
+                // Need to try to capture any calls to ConditionType::Acknowledge
+                if (methodToCall.ObjectId.Equals(Opc.Ua.ObjectTypeIds.ConditionType) && ( ackConfirmMethod || commentMethod ) )
+                {
+                    // Spec says Ack - Bad_NodeIdInvalid
+                    // Confirm - Bad_NodeIdUnknown
+                    // AddComment - Bad_NodeIdInvalid
+                    // Tests say
+                    // Ack - Bad_NodeIdUnknown (this is my edit, and probably wrong)
+                    // Confirm - Bad_NodeIdUnknown (my Edit, probably wrong)
+                    // AddComment - Invalid
+
+                    // 
                     // Override any other errors that may be there, even if this is 'Processed'
-                    errors[ii] = StatusCodes.BadNodeIdUnknown;
+                    errors[ii] = StatusCodes.BadNodeIdInvalid;
                     methodToCall.Processed = true;
                     continue;
                 }
@@ -2820,6 +2862,13 @@ namespace Quickstarts.ReferenceServer
 
                     if (initialHandle == null)
                     {
+                        if (ackConfirmMethod)
+                        {
+                            // Mantis 6944
+                            errors[ii] = StatusCodes.BadNodeIdUnknown;
+                            methodToCall.Processed = true;
+                        }
+
                         continue;
                     }
 

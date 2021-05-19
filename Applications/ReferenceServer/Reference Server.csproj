@@ -77,6 +77,7 @@
   <ItemGroup>
     <Compile Include="Additions\AlarmControllers\BranchAlarmController.cs" />
     <Compile Include="Additions\AlarmControllers\ChatterAlarmController.cs" />
+    <Compile Include="Additions\AlarmControllers\AcknowledgeTestAlarmController.cs" />
     <Compile Include="Additions\AlarmControllers\ConfirmTestAlarmController.cs" />
     <Compile Include="Additions\AlarmControllers\FastToggleAlarmController.cs" />
     <Compile Include="Additions\AlarmControllers\LimitAlarmController.cs" />

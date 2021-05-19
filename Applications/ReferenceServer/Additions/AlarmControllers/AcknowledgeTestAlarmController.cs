@@ -8,11 +8,11 @@ using Opc.Ua;
 
 namespace Quickstarts.ReferenceServer
 {
-    public class ConfirmTestAlarmController : AlarmController
+    public class AcknowledgeableTestAlarmController : AlarmController
     {
         private bool m_pause = false;
 
-        public ConfirmTestAlarmController(BaseDataVariableState variable, int interval, bool isBoolean) :
+        public AcknowledgeableTestAlarmController(BaseDataVariableState variable, int interval, bool isBoolean) :
             base(variable, interval, isBoolean)
         {
         }
@@ -44,20 +44,14 @@ namespace Quickstarts.ReferenceServer
 
         public override void OnAcknowledge()
         {
-            // Want true here, but there are test cases where confirm is not called!
-            // So I need a timeout
             m_pause = false;
-
             m_nextTime = DateTime.Now;
-            m_nextTime = m_nextTime.AddMilliseconds(m_interval * 6);
+            m_nextTime = m_nextTime.AddMilliseconds(m_interval * 2);
         }
 
         public override void OnConfirm()
         {
-            m_pause = false;
-
-            m_nextTime = DateTime.Now;
-            m_nextTime = m_nextTime.AddMilliseconds(m_interval* 2);
+            OnAcknowledge();
         }
     }
 }

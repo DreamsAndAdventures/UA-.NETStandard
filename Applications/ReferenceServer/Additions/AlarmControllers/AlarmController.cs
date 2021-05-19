@@ -98,6 +98,29 @@ namespace Quickstarts.ReferenceServer
             m_nextTime = m_nextTime.AddMilliseconds(m_interval);
         }
 
+        public void ManualWrite( object value )
+        {
+            if ( value.GetType().Name == "Int32" )
+            {
+                m_value = (Int32)value;
+            }
+            else
+            {
+                if ((bool)value )
+                {
+                    m_value = 70;
+                    m_increment = true;
+                }
+                else
+                {
+                    m_value = 50;
+                }
+            }
+            Type valueType = value.GetType();
+
+//            m_value = value;
+        }
+
         public virtual bool CanSetValue()
         {
             bool setValue = false;

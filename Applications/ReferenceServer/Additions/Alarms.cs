@@ -12,9 +12,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 using Opc.Ua;
 using Opc.Ua.Server;
@@ -38,11 +35,11 @@ namespace Quickstarts.ReferenceServer
         private bool m_allowEntry = false;
 
         private string[] m_conformanceUnits = {
-            "Basic",
-            "Alarm",
-            "Enable",
-            "Acknowledge",
-            "Confirm",
+            //"Basic",
+            //"Alarm",
+            //"Enable",
+            //"Acknowledge",
+            //"Confirm",
             //"Shelve",
             //"Comment",
             //"Suppression",
@@ -86,7 +83,7 @@ namespace Quickstarts.ReferenceServer
 
 
             Type alarmControllerType = Type.GetType("Quickstarts.ReferenceServer.AlarmController");
-            int defaultInterval = 500;
+            int defaultInterval = 1000;
             string defaultIntervalString = defaultInterval.ToString();
 
             int conditionTypeIndex = 0;
@@ -116,13 +113,10 @@ namespace Quickstarts.ReferenceServer
 
                 if (unitName == "Acknowledge")
                 {
-                    //interval = 1500;
-                    //intervalString = interval.ToString();
+                    controllerType = Type.GetType("Quickstarts.ReferenceServer.AcknowledgeableTestAlarmController");
                 }
                 else if (unitName == "Confirm" || unitName == "Comment" )
                 {
-                    //interval = 1000;
-                    //intervalString = interval.ToString();
                     controllerType = Type.GetType("Quickstarts.ReferenceServer.ConfirmTestAlarmController");
                 }
 
@@ -147,7 +141,6 @@ namespace Quickstarts.ReferenceServer
                 AlarmController booleanAlarmController = (AlarmController)Activator.CreateInstance(controllerType, booleanTrigger, interval, true);
                 SourceController booleanSourceController = new SourceController(booleanTrigger, booleanAlarmController);
                 triggerMap.Add("Boolean", booleanSourceController);
-
 
                 string deviationTriggerName = "DeviationSource";
                 string deviationTriggerNodeName = unitNodeName + "." + deviationTriggerName;
@@ -235,27 +228,51 @@ namespace Quickstarts.ReferenceServer
                     optional: GetUseOptional(unitName, ref useOptional));
                 m_alarms.Add(limit.AlarmNodeName, limit);
 
-                AlarmHolder exclusiveLimit = new ExclusiveLimitHolder(
+                string optionalName = intervalString + "Optional";
+                string mandatoryName = intervalString + "Mandatory";
+                AlarmHolder mandatoryExclusiveLimit = new ExclusiveLimitHolder(
                     this,
                     unitFolder,
                     analogSourceController,
-                    intervalString,
+                    mandatoryName,
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
                     controllerType,
                     interval,
-                    optional: GetUseOptional(unitName, ref useOptional));
-                m_alarms.Add(exclusiveLimit.AlarmNodeName, exclusiveLimit);
+                    optional: false);
+                m_alarms.Add(mandatoryExclusiveLimit.AlarmNodeName, mandatoryExclusiveLimit);
 
-                AlarmHolder exclusiveLevel = new ExclusiveLevelHolder(
+                AlarmHolder optionalExclusiveLimit = new ExclusiveLimitHolder(
                     this,
                     unitFolder,
                     analogSourceController,
-                    intervalString,
+                    optionalName,
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
                     controllerType,
                     interval,
-                    optional: GetUseOptional(unitName, ref useOptional));
-                m_alarms.Add(exclusiveLevel.AlarmNodeName, exclusiveLevel);
+                    optional: true);
+                m_alarms.Add(optionalExclusiveLimit.AlarmNodeName, optionalExclusiveLimit);
+
+                AlarmHolder mandatoryExclusiveLevel = new ExclusiveLevelHolder(
+                    this,
+                    unitFolder,
+                    analogSourceController,
+                    mandatoryName,
+                    GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                    controllerType,
+                    interval,
+                    optional: false);
+                m_alarms.Add(mandatoryExclusiveLevel.AlarmNodeName, mandatoryExclusiveLevel);
+
+                AlarmHolder optionalExclusiveLevel = new ExclusiveLevelHolder(
+                    this,
+                    unitFolder,
+                    analogSourceController,
+                    optionalName,
+                    GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                    controllerType,
+                    interval,
+                    optional: true);
+                m_alarms.Add(optionalExclusiveLevel.AlarmNodeName, optionalExclusiveLevel);
 
                 AlarmHolder exclusiveRateOfChange = new ExclusiveRateOfChangeHolder(
                     this,
@@ -280,27 +297,49 @@ namespace Quickstarts.ReferenceServer
                     optional: GetUseOptional(unitName, ref useOptional));
                 m_alarms.Add(exclusiveDeviation.AlarmNodeName, exclusiveDeviation);
 
-                AlarmHolder nonExclusiveLimit = new NonExclusiveLimitHolder(
+                AlarmHolder mandatoryNonExclusiveLimit = new NonExclusiveLimitHolder(
                     this,
                     unitFolder,
                     analogSourceController,
-                    intervalString,
+                    mandatoryName,
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
                     controllerType,
                     interval,
-                    optional: GetUseOptional(unitName, ref useOptional));
-                m_alarms.Add(nonExclusiveLimit.AlarmNodeName, nonExclusiveLimit);
+                    optional: false);
+                m_alarms.Add(mandatoryNonExclusiveLimit.AlarmNodeName, mandatoryNonExclusiveLimit);
 
-                AlarmHolder nonExclusiveLevel = new NonExclusiveLevelHolder(
+                AlarmHolder optionalNonExclusiveLimit = new NonExclusiveLimitHolder(
                     this,
                     unitFolder,
                     analogSourceController,
-                    intervalString,
+                    optionalName,
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
                     controllerType,
                     interval,
-                    optional: GetUseOptional(unitName, ref useOptional));
-                m_alarms.Add(nonExclusiveLevel.AlarmNodeName, nonExclusiveLevel);
+                    optional: true);
+                m_alarms.Add(optionalNonExclusiveLimit.AlarmNodeName, optionalNonExclusiveLimit);
+
+                AlarmHolder mandatoryNonExclusiveLevel = new NonExclusiveLevelHolder(
+                    this,
+                    unitFolder,
+                    analogSourceController,
+                    mandatoryName,
+                    GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                    controllerType,
+                    interval,
+                    optional: false);
+                m_alarms.Add(mandatoryNonExclusiveLevel.AlarmNodeName, mandatoryNonExclusiveLevel);
+
+                AlarmHolder optionalNonExclusiveLevel = new NonExclusiveLevelHolder(
+                    this,
+                    unitFolder,
+                    analogSourceController,
+                    optionalName,
+                    GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                    controllerType,
+                    interval,
+                    optional: true);
+                m_alarms.Add(optionalNonExclusiveLevel.AlarmNodeName, optionalNonExclusiveLevel);
 
                 AlarmHolder nonExclusiveRateOfChange = new NonExclusiveRateOfChangeHolder(
                     this,
@@ -347,7 +386,7 @@ namespace Quickstarts.ReferenceServer
         public bool GetUseOptional(string unitName, ref bool optional )
         {
             bool returnValue = optional;
-            if (unitName == "Confirm")
+            if (unitName == "Confirm" || unitName == "ExclusiveLevel" )
             {
                 returnValue = true;
             }
@@ -508,25 +547,45 @@ namespace Quickstarts.ReferenceServer
             ref StatusCode statusCode,
             ref DateTime timestamp)
         {
-            AlarmHolder alarmHolder = GetAlarmHolder(node);
-            if (alarmHolder == null)
+            Dictionary<string, SourceController> sourceControllers = GetUnitAlarms(node);
+            if (sourceControllers == null)
             {
-                return Opc.Ua.StatusCodes.Bad;
+                return StatusCodes.BadNodeIdUnknown;
             }
 
-            bool updated = false;
-            if ( alarmHolder.Trigger.Value != value)
+            if (sourceControllers != null)
             {
-                updated = true;
-                alarmHolder.Trigger.Value = value;
+                SourceController sourceController = GetSourceControllerFromNodeState(node, sourceControllers);
+
+                if ( sourceController == null )
+                {
+                    return StatusCodes.BadNodeIdUnknown;
+                }
+
+                GetNodeManager().m_logger.Information("Manual Write " + value.ToString() + " to " + node.NodeId.ToString() );
+
+                lock (m_alarms)
+                {
+                    sourceController.Source.Value = value;
+                    Type valueType = value.GetType();
+                    sourceController.Controller.ManualWrite(value);
+                    IList<IReference> references = new List<IReference>();
+                    sourceController.Source.GetReferences(GetNodeManager().SystemContext, references, ReferenceTypes.HasCondition, false);
+                    foreach (IReference reference in references)
+                    {
+                        string identifier = (string)reference.TargetId.ToString();
+                        if (m_alarms.ContainsKey(identifier))
+                        {
+                            AlarmHolder holder = m_alarms[identifier];
+                            holder.Update(true);
+                        }
+                    }
+                }
             }
-
-            // TODO is this a problem
-            alarmHolder.SetValue("OnWriteAlarmTrigger " + value.ToString());
-
 
             return Opc.Ua.StatusCodes.Good;
         }
+
 
         public void OnStateChanged(
             ISystemContext context,
@@ -716,6 +775,44 @@ namespace Quickstarts.ReferenceServer
             }
 
             return unit;
+        }
+
+        public SourceController GetSourceControllerFromNodeState( NodeState nodeState, Dictionary<string, SourceController> map )
+        {
+            SourceController sourceController = null;
+
+            string name = GetSourceNameFromNodeState(nodeState);
+            if ( map.ContainsKey( name ) )
+            {
+                sourceController = map[name];
+            }
+
+            return sourceController;
+        }
+
+        public string GetSourceNameFromNodeState( NodeState nodeState )
+        {
+            return GetSourceNameFromNodeId(nodeState.NodeId);
+        }
+
+        public string GetSourceNameFromNodeId(NodeId nodeId)
+        {
+            string sourceName = "";
+
+            if (nodeId.IdType == IdType.String)
+            {
+                string nodeIdString = (string)nodeId.Identifier;
+                string[] splitString = nodeIdString.Split('.');
+                // Alarms.UnitName.AnalogSource
+                if (splitString.Length >= 2)
+                {
+                    sourceName = splitString[splitString.Length-1].Replace("Source", "");
+                }
+            }
+
+            return sourceName;
+
+
         }
 
         public ServiceResult OnStart(

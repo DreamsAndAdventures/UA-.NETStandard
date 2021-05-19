@@ -37,7 +37,7 @@ namespace Quickstarts.ReferenceServer
 
             m_alarmRootName = m_alarmTypeName + extraName;
             m_mapName = (string)m_parent.NodeId.Identifier + "." + m_alarmRootName;
-            Debug.WriteLine("Creating " + m_mapName);
+            Debug.WriteLine("Creating " + m_mapName + " Optional = " + Optional );
 
 
             InitializeInternal(m_alarm);

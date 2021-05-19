@@ -111,8 +111,10 @@ namespace Quickstarts.ReferenceServer
                 AcknowledgeableConditionState alarm = GetAlarm();
                 if (IsActive())
                 {
+                    Log("AcknowledgeableConditionTypeHolder", "Setting Acked State to false");
                     alarm.SetAcknowledgedState(SystemContext, acknowledged: false);
                     alarm.Retain.Value = true;
+
                 }
                 else
                 {
@@ -227,12 +229,18 @@ namespace Quickstarts.ReferenceServer
                 if (m_alarms.GetUnitFromNodeState(alarm) == "Acknowledge")
                 {
                     alarm.SetConfirmedState(SystemContext, confirmed: true);
+                    Log("OnAcknowledge", "Ignore Confirmed State, setting confirmed to true");
                 }
                 else
                 {
                     alarm.Message.Value = "User Acknowledged Event " + DateTime.Now.ToShortTimeString();
+                    Log("OnAcknowledge", "Setting Confirmed State to False");
                     alarm.SetConfirmedState(SystemContext, confirmed: false);
                 }
+            }
+            else
+            {
+                Log("OnAcknowledge", "Optional Is False, ignorming confirmed State");
             }
 
             if (CanSetComment(comment))
@@ -287,6 +295,7 @@ namespace Quickstarts.ReferenceServer
             byte[] eventId,
             LocalizedText comment)
         {
+
             if (!Optional)
             {
                 return StatusCodes.BadMethodInvalid;
@@ -294,10 +303,12 @@ namespace Quickstarts.ReferenceServer
 
             string eventIdString = Utils.ToHexString(eventId);
 
+            Log("OnConfirm", "Called with eventId " + eventIdString + " Comment " + comment.Text );
+
             if (m_confirmed.Contains(eventIdString))
             {
-                LogError("OnAcknowledge", EventErrorMessage(eventId) + " already acknowledged");
-                return StatusCodes.BadConditionBranchAlreadyAcked;
+                LogError("OnConfirm", EventErrorMessage(eventId) + " already confirmed");
+                return StatusCodes.BadConditionBranchAlreadyConfirmed;
             }
 
 
@@ -357,7 +368,7 @@ namespace Quickstarts.ReferenceServer
             }
             else
             {
-                m_delayedMessages.Add("OnConfirm");
+                m_delayedMessages.Add(m_mapName + " OnConfirm");
 
                 // Might need to come back to this.
                 m_alarmController.OnConfirm();

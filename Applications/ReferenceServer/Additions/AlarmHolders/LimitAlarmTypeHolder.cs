@@ -53,7 +53,7 @@ namespace Quickstarts.ReferenceServer
                 alarm.HighLimit = new PropertyState<double>(alarm);
             }
 
-            if ( !m_isLimit)
+            if (Optional)
             {
                 if (alarm.HighHighLimit == null)
                 {
@@ -67,17 +67,10 @@ namespace Quickstarts.ReferenceServer
                 {
                     alarm.LowLowLimit = new PropertyState<double>(alarm);
                 }
-            }
-
-            if (Optional)
-            {
                 alarm.BaseHighLimit = new PropertyState<double>(alarm);
-                if (!m_isLimit)
-                {
-                    alarm.BaseHighHighLimit = new PropertyState<double>(alarm);
-                    alarm.BaseLowLimit = new PropertyState<double>(alarm);
-                    alarm.BaseLowLowLimit = new PropertyState<double>(alarm);
-                }
+                alarm.BaseHighHighLimit = new PropertyState<double>(alarm);
+                alarm.BaseLowLimit = new PropertyState<double>(alarm);
+                alarm.BaseLowLowLimit = new PropertyState<double>(alarm);
             }
 
             // Call the base class to set parameters
@@ -85,23 +78,16 @@ namespace Quickstarts.ReferenceServer
 
             alarm.HighLimit.Value = Defines.HIGH_ALARM;
 
-            if (!m_isLimit)
+            if (Optional)
             {
                 alarm.HighHighLimit.Value = Defines.HIGHHIGH_ALARM;
                 alarm.LowLimit.Value = Defines.LOW_ALARM;
                 alarm.LowLowLimit.Value = Defines.LOWLOW_ALARM;
-            }
 
-            if (Optional)
-            {
                 alarm.BaseHighLimit.Value = Defines.HIGH_ALARM;
-
-                if (!m_isLimit)
-                {
-                    alarm.BaseHighHighLimit.Value = Defines.HIGHHIGH_ALARM;
-                    alarm.BaseLowLimit.Value = Defines.LOW_ALARM;
-                    alarm.BaseLowLowLimit.Value = Defines.LOWLOW_ALARM;
-                }
+                alarm.BaseHighHighLimit.Value = Defines.HIGHHIGH_ALARM;
+                alarm.BaseLowLimit.Value = Defines.LOW_ALARM;
+                alarm.BaseLowLowLimit.Value = Defines.LOWLOW_ALARM;
             }
         }
 

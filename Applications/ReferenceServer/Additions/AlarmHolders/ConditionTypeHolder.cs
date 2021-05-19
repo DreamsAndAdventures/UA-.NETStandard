@@ -223,7 +223,7 @@ namespace Quickstarts.ReferenceServer
             }
         }
 
-        protected ushort GetSeverity()
+        protected virtual ushort GetSeverity()
         {
             ushort severity = Defines.INACTIVE_SEVERITY;
 
