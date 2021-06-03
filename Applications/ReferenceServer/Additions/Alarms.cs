@@ -32,6 +32,12 @@ namespace Quickstarts.ReferenceServer
         CertificateExpirationTypeHolder m_expired = null;
         CertificateExpirationTypeHolder m_inside = null;
         CertificateExpirationTypeHolder m_outside = null;
+
+        SourceController m_sineController = null;
+        BaseDataVariableState m_sine = null;
+        BaseDataVariableState m_differential = null;
+        DateTime m_sineRestart = DateTime.Now;
+
         private bool m_allowEntry = false;
 
         private string[] m_conformanceUnits = {
@@ -43,14 +49,21 @@ namespace Quickstarts.ReferenceServer
             //"Shelve",
             //"Comment",
             //"Suppression",
-            //"OffNormal",
+            "OffNormal",
             //"SystemOffNormal",
             //"CertificateExpiration",
             //"Refresh",
             //"Refresh2",
             //"Discrete",
             //"ConditionClasses",
-            "ExclusiveLevel"
+            "ExclusiveLimit",
+            "ExclusiveLevel",
+            "ExclusiveDeviation",
+            "ExclusiveRateOfChange",
+            "NonExclusiveLimit",
+            "NonExclusiveLevel",
+            "NonExclusiveDeviation",
+            "NonExclusiveRateOfChange"
         };
 
         private SupportedAlarmConditionType[] m_ConditionTypes = {
@@ -71,9 +84,15 @@ namespace Quickstarts.ReferenceServer
 
         public void CreateAlarms(FolderState root)
         {
+            NodeState derivedSystemOffNormalAlarmType = DerivedSystemOffNormalAlarmType.CreateType(GetNodeManager());
+            NodeState derivedExclusiveLevelAlarmType = DerivedExclusiveLevelAlarmType.CreateType(GetNodeManager());
+            NodeState derivedNonExclusiveLevelAlarmType = DerivedNonExclusiveLevelAlarmType.CreateType(GetNodeManager());
+
             string alarmsName = "Alarms";
             string alarmsNodeName = alarmsName;
             FolderState alarmsFolder = Helpers.CreateFolder(root, NameSpaceIndex, alarmsNodeName, alarmsName);
+
+            CreateTestItems(alarmsFolder);
 
             // Setpoint NodeId
             BaseDataVariableState deviationSetpoint = Helpers.CreateVariable(alarmsFolder, NameSpaceIndex, "DeviationSetpoint", "DeviationSetpoint");
@@ -261,6 +280,7 @@ namespace Quickstarts.ReferenceServer
                     controllerType,
                     interval,
                     optional: false);
+
                 m_alarms.Add(mandatoryExclusiveLevel.AlarmNodeName, mandatoryExclusiveLevel);
 
                 AlarmHolder optionalExclusiveLevel = new ExclusiveLevelHolder(
@@ -273,6 +293,29 @@ namespace Quickstarts.ReferenceServer
                     interval,
                     optional: true);
                 m_alarms.Add(optionalExclusiveLevel.AlarmNodeName, optionalExclusiveLevel);
+
+                AlarmHolder mandatoryDerivedExclusiveLevel = new DerivedExclusiveLevelHolder(
+                    this,
+                    unitFolder,
+                    analogSourceController,
+                    mandatoryName,
+                    GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                    controllerType,
+                    interval,
+                    optional: false);
+
+                m_alarms.Add(mandatoryDerivedExclusiveLevel.AlarmNodeName, mandatoryDerivedExclusiveLevel);
+
+                AlarmHolder optionalDerivedExclusiveLevel = new DerivedExclusiveLevelHolder(
+                    this,
+                    unitFolder,
+                    analogSourceController,
+                    optionalName,
+                    GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                    controllerType,
+                    interval,
+                    optional: true);
+                m_alarms.Add(optionalDerivedExclusiveLevel.AlarmNodeName, optionalDerivedExclusiveLevel);
 
                 AlarmHolder exclusiveRateOfChange = new ExclusiveRateOfChangeHolder(
                     this,
@@ -341,6 +384,28 @@ namespace Quickstarts.ReferenceServer
                     optional: true);
                 m_alarms.Add(optionalNonExclusiveLevel.AlarmNodeName, optionalNonExclusiveLevel);
 
+                AlarmHolder mandatoryDerivedNonExclusiveLevel = new DerivedNonExclusiveLevelHolder(
+                    this,
+                    unitFolder,
+                    analogSourceController,
+                    mandatoryName,
+                    GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                    controllerType,
+                    interval,
+                    optional: false);
+                m_alarms.Add(mandatoryDerivedNonExclusiveLevel.AlarmNodeName, mandatoryDerivedNonExclusiveLevel);
+
+                AlarmHolder optionalDerivedNonExclusiveLevel = new DerivedNonExclusiveLevelHolder(
+                    this,
+                    unitFolder,
+                    analogSourceController,
+                    optionalName,
+                    GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                    controllerType,
+                    interval,
+                    optional: true);
+                m_alarms.Add(optionalDerivedNonExclusiveLevel.AlarmNodeName, optionalDerivedNonExclusiveLevel);
+
                 AlarmHolder nonExclusiveRateOfChange = new NonExclusiveRateOfChangeHolder(
                     this,
                     unitFolder,
@@ -364,12 +429,72 @@ namespace Quickstarts.ReferenceServer
                     optional: GetUseOptional(unitName, ref useOptional));
                 m_alarms.Add(nonExclusiveDeviation.AlarmNodeName, nonExclusiveDeviation);
 
+
+                AlarmHolder offNormal = new OffNormalAlarmTypeHolder(
+                    this,
+                    unitFolder,
+                    booleanSourceController,
+                    intervalString,
+                    GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                    controllerType,
+                    interval,
+                    optional: GetUseOptional(unitName, ref useOptional));
+                m_alarms.Add(offNormal.AlarmNodeName, offNormal);
+
+                AlarmHolder systemOff = new SystemOffNormalAlarmTypeHolder(
+                    this,
+                    unitFolder,
+                    booleanSourceController,
+                    intervalString,
+                    GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                    controllerType,
+                    interval,
+                    optional: GetUseOptional(unitName, ref useOptional));
+                m_alarms.Add(systemOff.AlarmNodeName, systemOff);
+
+
+                AlarmHolder derivedSystemOff = new DerivedSystemOffNormalAlarmTypeHolder(
+                    this,
+                    unitFolder,
+                    booleanSourceController,
+                    intervalString,
+                    GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                    controllerType,
+                    interval,
+                    optional: GetUseOptional(unitName, ref useOptional));
+                m_alarms.Add(derivedSystemOff.AlarmNodeName, derivedSystemOff);
+
+
                 Debug.WriteLine("Completed alarms for " + unitName);
 
             }
 
             m_allowEntry = true;
 
+        }
+
+        public void CreateTestItems( FolderState alarmsFolder)
+        {
+            BaseDataVariableState sawtooth = Helpers.CreateVariable(alarmsFolder, NameSpaceIndex, "Sawtooth", "Sawtooth");
+            sawtooth.AccessLevel = AccessLevels.CurrentRead;
+            sawtooth.UserAccessLevel = AccessLevels.CurrentRead;
+
+            m_sine = Helpers.CreateVariable(alarmsFolder, NameSpaceIndex, "Sine", "Sine", Opc.Ua.DataTypes.Double);
+            m_sine.AccessLevel = AccessLevels.CurrentRead;
+            m_sine.UserAccessLevel = AccessLevels.CurrentRead;
+
+            m_differential = Helpers.CreateVariable(alarmsFolder, NameSpaceIndex, "Differential", "Differential", Opc.Ua.DataTypes.Double);
+            m_differential.AccessLevel = AccessLevels.CurrentRead;
+            m_differential.UserAccessLevel = AccessLevels.CurrentRead;
+
+            Type alarmControllerType = Type.GetType("Quickstarts.ReferenceServer.AlarmController");
+            int defaultInterval = 1000;
+            string defaultIntervalString = defaultInterval.ToString();
+
+            AlarmController alarmController = (AlarmController)Activator.CreateInstance(alarmControllerType, sawtooth, defaultInterval, false);
+            m_sineController = new SourceController(sawtooth, alarmController);
+            m_sineController.Controller.Start();
+            m_sineRestart = DateTime.Now.AddSeconds(150);
         }
 
         public SupportedAlarmConditionType GetSupportedAlarmConditionType( ref int index )
@@ -525,6 +650,30 @@ namespace Quickstarts.ReferenceServer
                         Debug.WriteLine("Loop Exception " + ex.Message);
 
                     }
+
+                    if ( DateTime.Now > m_sineRestart )
+                    {
+                        m_sineController.Controller.Start();
+                        m_sineRestart = DateTime.Now.AddSeconds(150);
+                    }
+
+                    if ( m_sineController.Controller.Update(GetNodeManager().SystemContext) )
+                    {
+                        double value = (double)m_sineController.Controller.GetValue();
+                        double sine = 100 * Math.Sin(value) + 50;
+                        m_sine.Value = sine;
+                        m_differential.Value = Math.Abs(value - sine);
+
+                        // Sine wave function y = Amplitude * sine( WaveNumber( x - Horizontal ) ) + Vertical )
+                        // y = 100( ( x ) ) )
+                        m_sine.Timestamp = DateTime.UtcNow;
+                        m_sine.ClearChangeMasks(GetNodeManager().SystemContext, false);
+
+//                        m_differential.Value = m_sine.Value;
+                        m_differential.Timestamp = DateTime.UtcNow;
+                        m_differential.ClearChangeMasks(GetNodeManager().SystemContext, false);
+                    }
+
                 }
                 m_allowEntry = true;
             }

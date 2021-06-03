@@ -32,9 +32,12 @@ namespace Quickstarts.ReferenceServer
 
         public const int BASE_CUSTOM_TYPE_NODE_ID = 111111;
 
-        public const int DERIVED_SYSTEM_OFF_NORMAL_ALARM_TYPE = BASE_CUSTOM_TYPE_NODE_ID + 1;
-        public const string DERIVED_SYSTEM_OFF_NORMAL_ALARM_TYPE_NAME = "DerivedSystemOffNormalAlarmType";
-        public const string DERIVED_SYSTEM_OFF_NORMAL_ALARM_TYPE_PRODUCT_URI = BASE_PRODUCT_URI + DERIVED_SYSTEM_OFF_NORMAL_ALARM_TYPE_NAME;
+        public const string DERIVED_NAME = "Derived";
+        public const int DERIVED_TYPE_OFFSET = 500000; // Goofy, but should work to make it easier to create new alarm types
+
+        //public const int DERIVED_SYSTEM_OFF_NORMAL_ALARM_TYPE = BASE_CUSTOM_TYPE_NODE_ID + 1;
+        //public const string DERIVED_SYSTEM_OFF_NORMAL_ALARM_TYPE_NAME = "DerivedSystemOffNormalAlarmType";
+        //public const string DERIVED_SYSTEM_OFF_NORMAL_ALARM_TYPE_PRODUCT_URI = BASE_PRODUCT_URI + DERIVED_SYSTEM_OFF_NORMAL_ALARM_TYPE_NAME;
 
         public const int MILLISECONDS_PER_SECOND = 1000;
         public const int MILLISECONDS_PER_MINUTE = 60 * MILLISECONDS_PER_SECOND;

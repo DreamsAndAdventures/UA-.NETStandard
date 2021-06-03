@@ -93,11 +93,13 @@
     <Compile Include="Additions\AlarmHolders\DiscrepancyAlarmTypeHolder.cs" />
     <Compile Include="Additions\AlarmHolders\DiscreteHolder.cs" />
     <Compile Include="Additions\AlarmHolders\ExclusiveDeviationHolder.cs" />
+    <Compile Include="Additions\AlarmHolders\DerivedExclusiveLevelHolder.cs" />
     <Compile Include="Additions\AlarmHolders\ExclusiveLevelHolder.cs" />
     <Compile Include="Additions\AlarmHolders\ExclusiveLimitHolder.cs" />
     <Compile Include="Additions\AlarmHolders\ExclusiveRateOfChangeHolder.cs" />
     <Compile Include="Additions\AlarmHolders\LimitAlarmTypeHolder.cs" />
     <Compile Include="Additions\AlarmHolders\NonExclusiveDeviationHolder.cs" />
+    <Compile Include="Additions\AlarmHolders\DerivedNonExclusiveLevelHolder.cs" />
     <Compile Include="Additions\AlarmHolders\NonExclusiveLevelHolder.cs" />
     <Compile Include="Additions\AlarmHolders\NonExclusiveLimitHolder.cs" />
     <Compile Include="Additions\AlarmHolders\NonExclusiveRateOfChangeHolder.cs" />
@@ -107,6 +109,8 @@
     <Compile Include="Additions\AlarmHolders\BaseEventTypeHolder.cs" />
     <Compile Include="Additions\AlarmHolders\ConditionTypeHolder.cs" />
     <Compile Include="Additions\Defines.cs" />
+    <Compile Include="Additions\DerivedAlarmTypes\DerivedExclusiveLevelAlarmType.cs" />
+    <Compile Include="Additions\DerivedAlarmTypes\DerivedNonExclusiveLevelAlarmType.cs" />
     <Compile Include="Additions\DerivedAlarmTypes\DerivedSystemOffNormalAlarmType.cs" />
     <Compile Include="Additions\Helpers.cs" />
     <Compile Include="Additions\SourceController.cs" />

@@ -9,10 +9,10 @@ using Opc.Ua.Server;
 
 namespace Quickstarts.ReferenceServer
 {
-    public class DerivedSystemOffNormalAlarmType : SystemOffNormalAlarmState
+    public class DerivedNonExclusiveLevelAlarmType : NonExclusiveLevelAlarmState
     {
 
-        public DerivedSystemOffNormalAlarmType(NodeState parent) : base(parent)
+        public DerivedNonExclusiveLevelAlarmType(NodeState parent) : base(parent)
         {
         }
 
@@ -28,13 +28,13 @@ namespace Quickstarts.ReferenceServer
         {
             return Helpers.GetDefaultTypeDefinitionId(
                 namespaceUris,
-                Opc.Ua.ObjectTypeIds.SystemOffNormalAlarmType,
-                Opc.Ua.BrowseNames.SystemOffNormalAlarmType);
+                Opc.Ua.ObjectTypeIds.NonExclusiveLevelAlarmType,
+                Opc.Ua.BrowseNames.NonExclusiveLevelAlarmType);
         }
 
         public static BaseObjectTypeState CreateType( ReferenceNodeManager nodeManager )
         {
-            return Helpers.CreateType(nodeManager, Opc.Ua.ObjectTypeIds.SystemOffNormalAlarmType);
+            return Helpers.CreateType(nodeManager, Opc.Ua.ObjectTypeIds.NonExclusiveLevelAlarmType);
         }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -43,6 +44,14 @@ namespace Quickstarts.ReferenceServer
 
             // Call the base class to set parameters
             base.Initialize(alarmTypeIdentifier, name, maxTimeShelved, isLimit: false);
+            Debug.WriteLine("NonExclusiveLevelHolder alarm typedefinition " + m_alarm.TypeDefinitionId.ToString());
+
         }
+        public override void SetValue(string message = "")
+        {
+            base.SetValue(message);
+
+        }
+
     }
 }

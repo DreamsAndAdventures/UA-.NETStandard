@@ -419,6 +419,14 @@ namespace Quickstarts.ReferenceServer
                 case Opc.Ua.ObjectTypes.DiscrepancyAlarmType:
                     alarmTypeName = "DiscrepancyAlarmType";
                     break;
+
+                default:
+                    if (alarmTypeIdentifier > Defines.DERIVED_TYPE_OFFSET)
+                    {
+                        UInt32 original = alarmTypeIdentifier - Defines.DERIVED_TYPE_OFFSET;
+                        alarmTypeName = Defines.DERIVED_NAME + GetAlarmTypeName(original);
+                    }
+                    break;
             }
 
             return alarmTypeName;
@@ -428,11 +436,9 @@ namespace Quickstarts.ReferenceServer
         {
             ushort nameSpaceIndex = 0;
 
-            switch (alarmTypeIdentifier)
+            if ( alarmTypeIdentifier > Defines.DERIVED_TYPE_OFFSET )
             {
-                case Defines.DERIVED_SYSTEM_OFF_NORMAL_ALARM_TYPE:
-                    nameSpaceIndex = m_alarms.GetNodeManager().NamespaceIndex;
-                    break;
+                nameSpaceIndex = m_alarms.GetNodeManager().NamespaceIndex;
             }
 
             return nameSpaceIndex;

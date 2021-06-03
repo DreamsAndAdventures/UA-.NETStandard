@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -23,6 +24,8 @@ namespace Quickstarts.ReferenceServer
         protected bool m_isBoolean = false;
         protected bool m_allowChanges = false;
         protected bool m_reset = false;
+        protected DateTime m_lastMaxValue = new DateTime();
+        protected bool m_validLastMaxValue = false;
 
         #endregion
 
@@ -43,6 +46,8 @@ namespace Quickstarts.ReferenceServer
         public virtual void Start()
         {
             Stop();
+
+            m_validLastMaxValue = false;
 
             m_nextTime = DateTime.Now;
             m_stopTime = DateTime.Now;
@@ -177,6 +182,13 @@ namespace Quickstarts.ReferenceServer
                 m_value += incrementValue;
                 if (m_value == maxValue)
                 {
+                    if ( m_validLastMaxValue )
+                    {
+                        Debug.WriteLine("Cycle Time " + (DateTime.Now - m_lastMaxValue).ToString() + " Interval " + m_interval.ToString());
+                    }
+                    m_lastMaxValue = DateTime.Now;
+                    m_validLastMaxValue = true;
+
                     m_increment = false;
                 }
             }

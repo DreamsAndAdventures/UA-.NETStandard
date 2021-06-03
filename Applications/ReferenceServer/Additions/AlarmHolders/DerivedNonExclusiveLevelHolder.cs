@@ -8,9 +8,9 @@ using Opc.Ua;
 
 namespace Quickstarts.ReferenceServer
 {
-    public class DerivedSystemOffNormalAlarmTypeHolder : SystemOffNormalAlarmTypeHolder
+    class DerivedNonExclusiveLevelHolder : NonExclusiveLevelHolder
     {
-        public DerivedSystemOffNormalAlarmTypeHolder(
+        public DerivedNonExclusiveLevelHolder(
             Alarms alarms,
             FolderState parent,
             SourceController trigger,
@@ -25,7 +25,7 @@ namespace Quickstarts.ReferenceServer
         {
             if (create)
             {
-                Initialize(Helpers.GetDerivedIdentifier(Opc.Ua.ObjectTypes.SystemOffNormalAlarmType), name, maxShelveTime);
+                Initialize(Helpers.GetDerivedIdentifier(Opc.Ua.ObjectTypes.NonExclusiveLevelAlarmType), name, maxShelveTime);
             }
         }
 
@@ -34,12 +34,15 @@ namespace Quickstarts.ReferenceServer
             string name,
             double maxTimeShelved = Defines.NORMAL_MAX_TIME_SHELVED)
         {
+            // Create an alarm and trigger name - Create a base method for creating the trigger, just provide the name
+
             if (m_alarm == null)
             {
-                m_alarm = new DerivedSystemOffNormalAlarmType(m_parent);
+                m_alarm = new DerivedNonExclusiveLevelAlarmType(m_parent);
             }
 
-            base.Initialize(alarmTypeIdentifier, name, maxTimeShelved);
+            // Call the base class to set parameters
+            base.Initialize(alarmTypeIdentifier, name, maxTimeShelved, isLimit: false);
         }
     }
 }

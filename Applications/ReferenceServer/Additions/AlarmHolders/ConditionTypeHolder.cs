@@ -204,6 +204,10 @@ namespace Quickstarts.ReferenceServer
             if ( alarm == null )
             {
                 alarm = GetAlarm();
+                if (m_alarmTypeName.Contains("Derived"))
+                {
+                    Debug.WriteLine("");
+                }
             }
 
             if (alarm.EnabledState.Id.Value)

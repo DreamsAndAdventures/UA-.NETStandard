@@ -1,16 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
 using Opc.Ua;
-
 namespace Quickstarts.ReferenceServer
 {
-    public class DerivedSystemOffNormalAlarmTypeHolder : SystemOffNormalAlarmTypeHolder
+    class DerivedExclusiveLevelHolder : ExclusiveLevelHolder
     {
-        public DerivedSystemOffNormalAlarmTypeHolder(
+        public DerivedExclusiveLevelHolder(
             Alarms alarms,
             FolderState parent,
             SourceController trigger,
@@ -25,7 +24,7 @@ namespace Quickstarts.ReferenceServer
         {
             if (create)
             {
-                Initialize(Helpers.GetDerivedIdentifier(Opc.Ua.ObjectTypes.SystemOffNormalAlarmType), name, maxShelveTime);
+                Initialize(Helpers.GetDerivedIdentifier(Opc.Ua.ObjectTypes.ExclusiveLevelAlarmType), name, maxShelveTime);
             }
         }
 
@@ -34,12 +33,18 @@ namespace Quickstarts.ReferenceServer
             string name,
             double maxTimeShelved = Defines.NORMAL_MAX_TIME_SHELVED)
         {
+            // Create an alarm and trigger name - Create a base method for creating the trigger, just provide the name
+
             if (m_alarm == null)
             {
-                m_alarm = new DerivedSystemOffNormalAlarmType(m_parent);
+                m_alarm = new DerivedExclusiveLevelAlarmType(m_parent);
             }
 
-            base.Initialize(alarmTypeIdentifier, name, maxTimeShelved);
+            ExclusiveLevelAlarmState alarm = (ExclusiveLevelAlarmState)m_alarm;
+
+            // Call the base class to set parameters
+            base.Initialize(alarmTypeIdentifier, name, maxTimeShelved, isLimit: false);
+            Debug.WriteLine("DerivedExclusiveLevelHolder alarm typedefinition " + m_alarm.TypeDefinitionId.ToString());
         }
     }
 }
