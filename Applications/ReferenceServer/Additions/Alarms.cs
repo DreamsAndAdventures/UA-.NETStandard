@@ -41,29 +41,27 @@ namespace Quickstarts.ReferenceServer
         private bool m_allowEntry = false;
 
         private string[] m_conformanceUnits = {
-            //"Basic",
-            //"Alarm",
-            //"Enable",
-            //"Acknowledge",
-            //"Confirm",
-            //"Shelve",
-            //"Comment",
-            //"Suppression",
+            "Basic",
+            "Alarm",
+            "Enable",
+            "Acknowledge",
+//            "Confirm",
+//            "Shelve",
+            "Comment",
+//            "Suppression",
             "OffNormal",
-            //"SystemOffNormal",
-            //"CertificateExpiration",
-            //"Refresh",
-            //"Refresh2",
+//            "SystemOffNormal",
+            "Refresh",
+            "Refresh2",
             //"Discrete",
-            //"ConditionClasses",
-            "ExclusiveLimit",
-            "ExclusiveLevel",
-            "ExclusiveDeviation",
-            "ExclusiveRateOfChange",
-            "NonExclusiveLimit",
-            "NonExclusiveLevel",
-            "NonExclusiveDeviation",
-            "NonExclusiveRateOfChange"
+            //"ExclusiveLimit",
+            //"ExclusiveLevel",
+            //"ExclusiveDeviation",
+            //"ExclusiveRateOfChange",
+            //"NonExclusiveLimit",
+            //"NonExclusiveLevel",
+            //"NonExclusiveDeviation",
+            //"NonExclusiveRateOfChange"
         };
 
         private SupportedAlarmConditionType[] m_ConditionTypes = {
@@ -92,7 +90,7 @@ namespace Quickstarts.ReferenceServer
             string alarmsNodeName = alarmsName;
             FolderState alarmsFolder = Helpers.CreateFolder(root, NameSpaceIndex, alarmsNodeName, alarmsName);
 
-            CreateTestItems(alarmsFolder);
+            //CreateTestItems(alarmsFolder);
 
             // Setpoint NodeId
             BaseDataVariableState deviationSetpoint = Helpers.CreateVariable(alarmsFolder, NameSpaceIndex, "DeviationSetpoint", "DeviationSetpoint");
@@ -651,27 +649,30 @@ namespace Quickstarts.ReferenceServer
 
                     }
 
-                    if ( DateTime.Now > m_sineRestart )
+                    if (m_sineController != null)
                     {
-                        m_sineController.Controller.Start();
-                        m_sineRestart = DateTime.Now.AddSeconds(150);
-                    }
+                        if (DateTime.Now > m_sineRestart)
+                        {
+                            m_sineController.Controller.Start();
+                            m_sineRestart = DateTime.Now.AddSeconds(150);
+                        }
 
-                    if ( m_sineController.Controller.Update(GetNodeManager().SystemContext) )
-                    {
-                        double value = (double)m_sineController.Controller.GetValue();
-                        double sine = 100 * Math.Sin(value) + 50;
-                        m_sine.Value = sine;
-                        m_differential.Value = Math.Abs(value - sine);
+                        if (m_sineController.Controller.Update(GetNodeManager().SystemContext))
+                        {
+                            double value = (double)m_sineController.Controller.GetValue();
+                            double sine = 100 * Math.Sin(value) + 50;
+                            m_sine.Value = sine;
+                            m_differential.Value = Math.Abs(value - sine);
 
-                        // Sine wave function y = Amplitude * sine( WaveNumber( x - Horizontal ) ) + Vertical )
-                        // y = 100( ( x ) ) )
-                        m_sine.Timestamp = DateTime.UtcNow;
-                        m_sine.ClearChangeMasks(GetNodeManager().SystemContext, false);
+                            // Sine wave function y = Amplitude * sine( WaveNumber( x - Horizontal ) ) + Vertical )
+                            // y = 100( ( x ) ) )
+                            m_sine.Timestamp = DateTime.UtcNow;
+                            m_sine.ClearChangeMasks(GetNodeManager().SystemContext, false);
 
-//                        m_differential.Value = m_sine.Value;
-                        m_differential.Timestamp = DateTime.UtcNow;
-                        m_differential.ClearChangeMasks(GetNodeManager().SystemContext, false);
+                            //                        m_differential.Value = m_sine.Value;
+                            m_differential.Timestamp = DateTime.UtcNow;
+                            m_differential.ClearChangeMasks(GetNodeManager().SystemContext, false);
+                        }
                     }
 
                 }

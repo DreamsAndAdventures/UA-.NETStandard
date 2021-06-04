@@ -28,6 +28,7 @@
  * ======================================================================*/
 
 using System;
+using System.IO;
 using System.Windows.Forms;
 using Opc.Ua;
 using Opc.Ua.Configuration;
@@ -60,8 +61,14 @@ namespace Quickstarts.ReferenceServer
                 ApplicationConfiguration config = application.LoadApplicationConfiguration(false).Result;
 
                 LoggerConfiguration loggerConfiguration = new LoggerConfiguration();
-//                Serilog.Events.LogEventLevel level = Serilog.Events.LogEventLevel.Fatal;
-                loggerConfiguration.WriteTo.File(@"e:\serverLog.txt", Serilog.Events.LogEventLevel.Verbose);
+
+                string logFileDirectory = "e:\\";
+                string logFileName = logFileDirectory + "serverLog.txt";
+                DirectoryInfo directoryInfo = new DirectoryInfo(logFileDirectory);
+                if ( directoryInfo.Exists )
+                {
+                    loggerConfiguration.WriteTo.File(@"e:\serverLog.txt", Serilog.Events.LogEventLevel.Verbose);
+                }
 
 #if DEBUG
                 // loggerConfiguration.WriteTo.Debug(restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Warning);

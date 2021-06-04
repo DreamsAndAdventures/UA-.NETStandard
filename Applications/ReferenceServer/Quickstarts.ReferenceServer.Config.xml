@@ -8,6 +8,7 @@
   <ApplicationUri>urn:localhost:UA:Quickstarts:ReferenceServer</ApplicationUri>
   <ProductUri>uri:opcfoundation.org:Quickstarts:ReferenceServer</ProductUri>
   <ApplicationType>Server_0</ApplicationType>
+  <LogFile>e:\serverLog.txt</LogFile>
   
   <SecurityConfiguration>
 
