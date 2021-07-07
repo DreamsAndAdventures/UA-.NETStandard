@@ -36,7 +36,9 @@ using System.Threading;
 using System.Numerics;
 using Opc.Ua;
 using Opc.Ua.Server;
+using Quickstarts.Servers;
 using Range = Opc.Ua.Range;
+using Namespaces = Quickstarts.Servers.Namespaces;
 
 using Serilog;
 
@@ -51,8 +53,12 @@ namespace Quickstarts.ReferenceServer
         /// <summary>
         /// Initializes the node manager.
         /// </summary>
+        /// 
+    //    public ReferenceNodeManager(IServerInternal server, ApplicationConfiguration configuration, Serilog.Core.Logger logger)
+    //: base(server, configuration, Namespaces.ReferenceApplications)
+
         public ReferenceNodeManager(IServerInternal server, ApplicationConfiguration configuration, Serilog.Core.Logger logger)
-            : base(server, configuration, Namespaces.ReferenceApplications)
+            : base(server, configuration, Namespaces.ReferenceServer)
         {
             SystemContext.NodeIdFactory = this;
 
@@ -209,7 +215,7 @@ namespace Quickstarts.ReferenceServer
 
                     if ( m_alarms == null )
                     {
-                        m_alarms = new Alarms(this);
+                        m_alarms = new Quickstarts.ReferenceServer.Alarms(this);
                     }
 
                     m_alarms.CreateAlarms(root);
@@ -2179,17 +2185,17 @@ namespace Quickstarts.ReferenceServer
 
         #region Archie
 
-        public ServiceResult OnWriteAlarmTrigger(
-            ISystemContext context,
-            NodeState node,
-            NumericRange indexRange,
-            QualifiedName dataEncoding,
-            ref object value,
-            ref StatusCode statusCode,
-            ref DateTime timestamp)
-        {
-            return m_alarms.OnWriteAlarmTrigger( context, node, indexRange, dataEncoding, ref value, ref statusCode, ref timestamp );
-        }
+        //public ServiceResult OnWriteAlarmTrigger(
+        //    ISystemContext context,
+        //    NodeState node,
+        //    NumericRange indexRange,
+        //    QualifiedName dataEncoding,
+        //    ref object value,
+        //    ref StatusCode statusCode,
+        //    ref DateTime timestamp)
+        //{
+        //    return m_alarms.OnWriteAlarmTrigger( context, node, indexRange, dataEncoding, ref value, ref statusCode, ref timestamp );
+        //}
 
         #endregion
 
@@ -2777,8 +2783,15 @@ namespace Quickstarts.ReferenceServer
         #endregion
 
         #region Archie
-        private Alarms m_alarms = null;
+        private Quickstarts.ReferenceServer.Alarms m_alarms = null;
+        /// <summary>
+        /// Implement Logger to write to file
+        /// </summary>
         public Serilog.Core.Logger m_logger;
+
+        /// <summary>
+        /// Provide a mechanism to add a predefined node, only derived
+        /// </summary>
 
         public void PublicAddPredefinedNode( NodeState nodeState)
         {
@@ -2917,6 +2930,9 @@ namespace Quickstarts.ReferenceServer
             }
         }
 
+        /// <summary>
+        /// Override ConditionRefresh
+        /// </summary>
 
         public override ServiceResult ConditionRefresh(
             OperationContext context,

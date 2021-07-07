@@ -49,6 +49,9 @@ namespace Quickstarts.ReferenceServer
     /// </remarks>
     public partial class ReferenceServer : ReverseConnectServer
     {
+        /// <summary>
+        /// Constructor.
+        /// </summary>
         public ReferenceServer(Serilog.Core.Logger logger)
         {
             m_logger = logger;
@@ -148,8 +151,11 @@ namespace Quickstarts.ReferenceServer
 
             try
             {
-                // allow a faster sampling interval for CurrentTime node.
-                ServerInternal.Status.Variable.CurrentTime.MinimumSamplingInterval = 250;
+                lock (ServerInternal.Status.Lock)
+                {
+                    // allow a faster sampling interval for CurrentTime node.
+                    ServerInternal.Status.Variable.CurrentTime.MinimumSamplingInterval = 250;
+                }
             }
             catch
             { }
@@ -159,6 +165,9 @@ namespace Quickstarts.ReferenceServer
 
         #region Archie
 
+        /// <summary>
+        /// Override
+        /// </summary>
         protected override void OnNodeManagerStarted(IServerInternal server)
         {
             server.ServerObject.ServerCapabilities.OperationLimits.MaxNodesPerBrowse.Value = 1000;
