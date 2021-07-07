@@ -1,13 +1,3 @@
-#define RUN_DISCRETE
-#define RUN_ALARM
-#define RUN_CERTIFICATES
-#define RUN_ACKNOWLEDGEABLE
-#define RUN_OFFNORMAL
-#define RUN_SYSTEMOFFNORMAL
-//#define RUN_DERIVEDSYSTEMOFFNORMAL
-#define RUN_CERTIFICATE
-#define RUN_LIMIT
-#define RUN_LEVEL
 
 using System;
 using System.Collections.Generic;
