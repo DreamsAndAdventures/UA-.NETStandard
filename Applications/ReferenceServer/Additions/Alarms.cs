@@ -36,6 +36,7 @@ namespace Quickstarts.ReferenceServer
         SourceController m_sineController = null;
         BaseDataVariableState m_sine = null;
         BaseDataVariableState m_differential = null;
+        bool m_runTest = true;
         DateTime m_sineRestart = DateTime.Now;
 
         private bool m_allowEntry = false;
@@ -45,23 +46,23 @@ namespace Quickstarts.ReferenceServer
             "Alarm",
             "Enable",
             "Acknowledge",
-//            "Confirm",
-//            "Shelve",
+            "Confirm",
+            "Shelve",
             "Comment",
-//            "Suppression",
+            "Suppression",
             "OffNormal",
-//            "SystemOffNormal",
+            "SystemOffNormal",
             "Refresh",
             "Refresh2",
-            //"Discrete",
-            //"ExclusiveLimit",
-            //"ExclusiveLevel",
-            //"ExclusiveDeviation",
-            //"ExclusiveRateOfChange",
-            //"NonExclusiveLimit",
-            //"NonExclusiveLevel",
-            //"NonExclusiveDeviation",
-            //"NonExclusiveRateOfChange"
+            "Discrete",
+            "ExclusiveLimit",
+            "ExclusiveLevel",
+            "ExclusiveDeviation",
+            "ExclusiveRateOfChange",
+            "NonExclusiveLimit",
+            "NonExclusiveLevel",
+            "NonExclusiveDeviation",
+            "NonExclusiveRateOfChange"
         };
 
         private SupportedAlarmConditionType[] m_ConditionTypes = {
@@ -90,14 +91,7 @@ namespace Quickstarts.ReferenceServer
             string alarmsNodeName = alarmsName;
             FolderState alarmsFolder = Helpers.CreateFolder(root, NameSpaceIndex, alarmsNodeName, alarmsName);
 
-            //CreateTestItems(alarmsFolder);
-
-            // Setpoint NodeId
-            BaseDataVariableState deviationSetpoint = Helpers.CreateVariable(alarmsFolder, NameSpaceIndex, "DeviationSetpoint", "DeviationSetpoint");
-            deviationSetpoint.AccessLevel = AccessLevels.CurrentRead;
-            deviationSetpoint.UserAccessLevel = AccessLevels.CurrentRead;
-            deviationSetpoint.Value = 50;
-
+            CreateTestItems(alarmsFolder);
 
             Type alarmControllerType = Type.GetType("Quickstarts.ReferenceServer.AlarmController");
             int defaultInterval = 1000;
@@ -177,6 +171,14 @@ namespace Quickstarts.ReferenceServer
                 SourceController rateOfChangeSourceController = new SourceController(rateOfChangeTrigger, rateOfChangeAlarmController);
                 triggerMap.Add("RateOfChange", rateOfChangeSourceController);
 
+                // Deviation Setpoint
+                string deviationSetpointName = "DeviationSetpoint";
+                string deviationSetpointNodeName = unitNodeName + "." + deviationSetpointName;
+
+                BaseDataVariableState deviationSetpoint = Helpers.CreateVariable(unitFolder, NameSpaceIndex, deviationSetpointNodeName, deviationSetpointName );
+                deviationSetpoint.AccessLevel = AccessLevels.CurrentRead;
+                deviationSetpoint.UserAccessLevel = AccessLevels.CurrentRead;
+                deviationSetpoint.Value = 50;
 
 
                 AlarmHolder ackAlarmType = new AcknowledgeableConditionTypeHolder(
@@ -659,6 +661,11 @@ namespace Quickstarts.ReferenceServer
 
                         if (m_sineController.Controller.Update(GetNodeManager().SystemContext))
                         {
+                            if (m_runTest)
+                            {
+                                //m_sineController.Controller.Test();
+                            }
+
                             double value = (double)m_sineController.Controller.GetValue();
                             double sine = 100 * Math.Sin(value) + 50;
                             m_sine.Value = sine;
@@ -995,11 +1002,11 @@ namespace Quickstarts.ReferenceServer
                             if (m_alarms.ContainsKey(identifier))
                             {
                                 AlarmHolder holder = m_alarms[identifier];
-                                holder.ClearBranches();
+                                holder.Start();
+                                bool updated = holder.Controller.Update(GetNodeManager().SystemContext);
+                                holder.Update(updated);
                             }
                         }
-
-                        sourceController.Controller.Start();
                     }
                 }
             }

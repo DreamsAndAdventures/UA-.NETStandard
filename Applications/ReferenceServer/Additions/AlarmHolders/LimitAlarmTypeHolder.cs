@@ -72,6 +72,21 @@ namespace Quickstarts.ReferenceServer
                 alarm.BaseLowLimit = new PropertyState<double>(alarm);
                 alarm.BaseLowLowLimit = new PropertyState<double>(alarm);
             }
+            else
+            {
+                if ( alarm.HighHighLimit != null )
+                {
+                    alarm.HighHighLimit = null;
+                }
+                if (alarm.LowLimit != null)
+                {
+                    alarm.LowLimit = null;
+                }
+                if (alarm.LowLowLimit != null)
+                {
+                    alarm.LowLowLimit = null;
+                }
+            }
 
             // Call the base class to set parameters
             base.Initialize(alarmTypeIdentifier, name, maxTimeShelved);
@@ -88,6 +103,21 @@ namespace Quickstarts.ReferenceServer
                 alarm.BaseHighHighLimit.Value = Defines.HIGHHIGH_ALARM;
                 alarm.BaseLowLimit.Value = Defines.LOW_ALARM;
                 alarm.BaseLowLowLimit.Value = Defines.LOWLOW_ALARM;
+            }
+            else
+            {
+                if (alarm.HighHighLimit != null)
+                {
+                    alarm.HighHighLimit = null;
+                }
+                if (alarm.LowLimit != null)
+                {
+                    alarm.LowLimit = null;
+                }
+                if (alarm.LowLowLimit != null)
+                {
+                    alarm.LowLowLimit = null;
+                }
             }
         }
 
