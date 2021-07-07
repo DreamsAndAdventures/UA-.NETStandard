@@ -17,7 +17,7 @@ namespace Quickstarts.ReferenceServer
     public class Alarms
     {
         private ReferenceNodeManager m_nodeManager;
-        private ushort NameSpaceIndex = 0;
+        private ushort NameSpaceIndex = 0 ;
         Dictionary<string, AlarmHolder> m_alarms = new Dictionary<string, AlarmHolder>();
 
         Dictionary<string, Dictionary<string, SourceController>> m_triggerMap =
