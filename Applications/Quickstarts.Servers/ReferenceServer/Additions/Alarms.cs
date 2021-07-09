@@ -8,6 +8,8 @@ using Opc.Ua.Server;
 
 #pragma warning disable CS0219
 
+#pragma warning disable CS1591
+
 namespace Quickstarts.ReferenceServer
 {
     /// <summary>
@@ -152,7 +154,8 @@ namespace Quickstarts.ReferenceServer
                 BaseDataVariableState deviationTrigger = Helpers.CreateVariable(unitFolder,
                     NameSpaceIndex, deviationTriggerNodeName, deviationTriggerName);
                 analogTrigger.OnWriteValue = OnWriteAlarmTrigger;
-                AlarmController deviationAlarmController = (AlarmController)Activator.CreateInstance(controllerType, deviationTrigger, interval, false);
+                Type deviationControllerType = Type.GetType("Quickstarts.ReferenceServer.DeviationController");
+                AlarmController deviationAlarmController = (AlarmController)Activator.CreateInstance(deviationControllerType, deviationTrigger, interval, false);
                 SourceController deviationSourceController = new SourceController(deviationTrigger, deviationAlarmController);
                 triggerMap.Add("Deviation", deviationSourceController);
 
@@ -311,28 +314,53 @@ namespace Quickstarts.ReferenceServer
                     optional: true);
                 m_alarms.Add(optionalDerivedExclusiveLevel.AlarmNodeName, optionalDerivedExclusiveLevel);
 
-                AlarmHolder exclusiveRateOfChange = new ExclusiveRateOfChangeHolder(
+                AlarmHolder exclusiveRateOfChangeMandatory = new ExclusiveRateOfChangeHolder(
                     this,
                     unitFolder,
                     rateOfChangeSourceController,
-                    intervalString,
+                    mandatoryName,
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
                     controllerType,
                     interval,
-                    optional: GetUseOptional(unitName, ref useOptional));
-                m_alarms.Add(exclusiveRateOfChange.AlarmNodeName, exclusiveRateOfChange);
+                    optional: false);
+                m_alarms.Add(exclusiveRateOfChangeMandatory.AlarmNodeName, exclusiveRateOfChangeMandatory);
 
-                AlarmHolder exclusiveDeviation = new ExclusiveDeviationHolder(
+                AlarmHolder exclusiveRateOfChangeOptional = new ExclusiveRateOfChangeHolder(
+                    this,
+                    unitFolder,
+                    rateOfChangeSourceController,
+                    optionalName,
+                    GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                    controllerType,
+                    interval,
+                    optional: true);
+                m_alarms.Add(exclusiveRateOfChangeOptional.AlarmNodeName, exclusiveRateOfChangeOptional);
+
+                Type deviationController  = Type.GetType("Quickstarts.ReferenceServer.DeviationController");
+
+                AlarmHolder exclusiveMandatoryDeviation = new ExclusiveDeviationHolder(
                     this,
                     unitFolder,
                     deviationSourceController,
-                    intervalString,
+                    mandatoryName,
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
-                    controllerType,
+                    deviationController,
                     interval,
-                    deviationSetpoint.NodeId,
-                    optional: GetUseOptional(unitName, ref useOptional));
-                m_alarms.Add(exclusiveDeviation.AlarmNodeName, exclusiveDeviation);
+                    deviationSetpoint,
+                    optional: false );
+                m_alarms.Add(exclusiveMandatoryDeviation.AlarmNodeName, exclusiveMandatoryDeviation);
+
+                AlarmHolder exclusiveOptionalDeviation = new ExclusiveDeviationHolder(
+                    this,
+                    unitFolder,
+                    deviationSourceController,
+                    optionalName,
+                    GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                    deviationController,
+                    interval,
+                    deviationSetpoint,
+                    optional: true);
+                m_alarms.Add(exclusiveOptionalDeviation.AlarmNodeName, exclusiveOptionalDeviation);
 
                 AlarmHolder mandatoryNonExclusiveLimit = new NonExclusiveLimitHolder(
                     this,
@@ -411,18 +439,29 @@ namespace Quickstarts.ReferenceServer
                     optional: GetUseOptional(unitName, ref useOptional));
                 m_alarms.Add(nonExclusiveRateOfChange.AlarmNodeName, nonExclusiveRateOfChange);
 
-                AlarmHolder nonExclusiveDeviation = new NonExclusiveDeviationHolder(
+                AlarmHolder nonExclusiveMandatoryDeviation = new NonExclusiveDeviationHolder(
                     this,
                     unitFolder,
                     deviationSourceController,
-                    intervalString,
+                    mandatoryName,
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
-                    controllerType,
+                    deviationController,
                     interval,
-                    deviationSetpoint.NodeId,
-                    optional: GetUseOptional(unitName, ref useOptional));
-                m_alarms.Add(nonExclusiveDeviation.AlarmNodeName, nonExclusiveDeviation);
+                    deviationSetpoint,
+                    optional: false);
+                m_alarms.Add(nonExclusiveMandatoryDeviation.AlarmNodeName, nonExclusiveMandatoryDeviation);
 
+                AlarmHolder nonExclusiveOptionalDeviation = new NonExclusiveDeviationHolder(
+                    this,
+                    unitFolder,
+                    deviationSourceController,
+                    optionalName,
+                    GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                    deviationController,
+                    interval,
+                    deviationSetpoint,
+                    optional: true);
+                m_alarms.Add(nonExclusiveOptionalDeviation.AlarmNodeName, nonExclusiveOptionalDeviation);
 
                 AlarmHolder offNormal = new OffNormalAlarmTypeHolder(
                     this,

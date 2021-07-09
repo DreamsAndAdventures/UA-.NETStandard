@@ -8,6 +8,8 @@ using Opc.Ua;
 
 #pragma warning disable CS0219
 
+#pragma warning disable CS1591
+
 namespace Quickstarts.ReferenceServer
 {
     public class DiscreteHolder : AlarmConditionTypeHolder

@@ -5,6 +5,8 @@ using System.Diagnostics;
 using Opc.Ua;
 
 
+#pragma warning disable CS1591
+
 
 namespace Quickstarts.ReferenceServer
 {

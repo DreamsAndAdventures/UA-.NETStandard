@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Opc.Ua;
 
 #pragma warning disable CS0219
+#pragma warning disable CS1591
 
 namespace Quickstarts.ReferenceServer
 {
@@ -66,7 +67,7 @@ namespace Quickstarts.ReferenceServer
             m_reset = true;
         }
 
-        public bool Update(ISystemContext systemContext)
+        public virtual bool Update(ISystemContext systemContext)
         {
             bool valueSet = false;
             if (CanSetValue())
@@ -222,6 +223,60 @@ namespace Quickstarts.ReferenceServer
         public int GetValue()
         {
             return m_value;
+        }
+
+        public int GetSawtooth()
+        {
+            return m_value;
+        }
+
+        public int GetSine(int minValue, int maxValue )
+        {
+            return CalcSine(minValue, maxValue, m_value);
+        }
+
+        public int CalcSine( int minValue, int maxValue, int value )
+        {
+            // What I want is a sawtooth compared against a sine value.
+            // This calculates a simular sine value that will have predictable differences between value and sine
+
+            /*
+             * https://www.mathsisfun.com/algebra/amplitude-period-frequency-phase-shift.html
+             * Sine with Phase Shift and Vertical Shift!  This is what I want
+             * y = A sin(B(x + C)) + D
+             * A - Amplitude
+             * B - relates to period - This should extend the time period
+             * C - Phase Shift
+             * D - Vertical Shift
+             * 
+             */
+
+            double twoPi = Math.PI * 2;
+
+            double normalSpan = maxValue - minValue;
+            double amplitude = normalSpan / 2;
+            double median = maxValue - amplitude;
+
+            double offsetValue = value - minValue;
+            double percentageOfRange = offsetValue / normalSpan;
+
+            double reducedPeriod = percentageOfRange / 2;
+
+            double period = twoPi; // this would relate to the interval.  Ignore for now.
+            double phase = -0.25; // phaseShift;
+            double verticalShift = median; // amplitude
+
+            double calculated = amplitude * (Math.Sin(period * (reducedPeriod + phase))) + verticalShift;
+
+            Debug.WriteLine(
+                " Phase " + String.Format("{0:0.00}", phase) +
+                " Value " + value.ToString() +
+                " Sine " + String.Format("{0:0.00}", calculated) +
+                " Offset Value " + String.Format("{0:0.00}", offsetValue) +
+                " Span " + String.Format("{0:0.00}", normalSpan) +
+                " Percentage of Range " + String.Format("{0:0.00}", percentageOfRange));
+
+            return (int)calculated;
         }
 
         public virtual bool ShouldSuppress()

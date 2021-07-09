@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using Opc.Ua;
 using Opc.Ua.Server;
 
+#pragma warning disable CS1591
+
 namespace Quickstarts.ReferenceServer
 {
     public class DerivedNonExclusiveLevelAlarmType : NonExclusiveLevelAlarmState

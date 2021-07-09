@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+#pragma warning disable CS1591
+
 namespace Quickstarts.ReferenceServer
 {
     public class Defines
@@ -14,6 +16,11 @@ namespace Quickstarts.ReferenceServer
         public const int HIGH_ALARM = 70;
         public const int LOW_ALARM = 30;
         public const int LOWLOW_ALARM = 10;
+
+        public const int DEVIATION_HIGHHIGH_ALARM = 10;
+        public const int DEVIATION_HIGH_ALARM = 7;
+        public const int DEVIATION_LOW_ALARM = -7;
+        public const int DEVIATION_LOWLOW_ALARM = -10;
 
         public const int INACTIVE_SEVERITY = 100;
 

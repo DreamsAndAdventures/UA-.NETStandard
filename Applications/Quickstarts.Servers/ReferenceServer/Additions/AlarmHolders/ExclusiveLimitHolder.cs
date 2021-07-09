@@ -115,7 +115,7 @@ namespace Quickstarts.ReferenceServer
                 alarm.SetLimitState(SystemContext, state);
             }
 
-            base.SetValue();
+            base.SetValue(message);
         }
 
         private ExclusiveLimitAlarmState GetAlarm()

@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 
 using Opc.Ua;
 
+#pragma warning disable CS1591
+
 namespace Quickstarts.ReferenceServer
 {
     public class SuppressWhileInactiveAlarmController : SuppressAlarmController

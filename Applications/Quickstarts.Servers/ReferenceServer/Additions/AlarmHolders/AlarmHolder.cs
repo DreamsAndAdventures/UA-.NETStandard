@@ -9,6 +9,8 @@ using Serilog;
 
 using Opc.Ua;
 
+#pragma warning disable CS1591
+
 namespace Quickstarts.ReferenceServer
 {
     public class AlarmHolder
@@ -19,7 +21,7 @@ namespace Quickstarts.ReferenceServer
             m_parent = parent;
             m_trigger = trigger.Source;
             m_alarmController = trigger.Controller;
-            m_alarmControllerType = controllerType;
+            m_alarmControllerType = trigger.Controller.GetType();
             m_interval = interval;
             m_branches = new Dictionary<string, BaseEventState>();
         }
