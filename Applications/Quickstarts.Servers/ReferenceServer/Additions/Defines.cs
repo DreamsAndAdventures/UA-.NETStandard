@@ -12,6 +12,8 @@ namespace Quickstarts.ReferenceServer
     {
         public const int MAX_VALUE = 100;
         public const int MIN_VALUE = 0;
+        public const int NORMAL_START_VALUE = 50;
+
         public const int HIGHHIGH_ALARM = 90;
         public const int HIGH_ALARM = 70;
         public const int LOW_ALARM = 30;
@@ -21,6 +23,18 @@ namespace Quickstarts.ReferenceServer
         public const int DEVIATION_HIGH_ALARM = 7;
         public const int DEVIATION_LOW_ALARM = -7;
         public const int DEVIATION_LOWLOW_ALARM = -10;
+
+        public const int RATEOFCHANGE_OFFSET = 65;
+        public const int RATEOFCHANGE_MAXIMUM = MAX_VALUE + ( RATEOFCHANGE_OFFSET * 2 );
+        public const int RATEOFCHANGE_MINIMUM = MIN_VALUE;
+        public const int RATEOFCHANGE_HIGHHIGH_THRESHOLD = 180;
+        public const int RATEOFCHANGE_HIGH_THRESHOLD = HIGH_ALARM + RATEOFCHANGE_OFFSET;
+        public const int RATEOFCHANGE_LOW_THRESHOLD = LOW_ALARM + RATEOFCHANGE_OFFSET;
+        public const int RATEOFCHANGE_LOWLOW_THRESHOLD = 50;
+        public const int RATEOFCHANGE_HIGHHIGH_ALARM = 16;
+        public const int RATEOFCHANGE_HIGH_ALARM = 8;
+        public const int RATEOFCHANGE_LOW_ALARM = -8;
+        public const int RATEOFCHANGE_LOWLOW_ALARM = -16;
 
         public const int INACTIVE_SEVERITY = 100;
 

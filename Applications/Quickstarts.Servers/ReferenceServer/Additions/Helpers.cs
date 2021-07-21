@@ -124,10 +124,11 @@ namespace Quickstarts.ReferenceServer
 
             return method;
         }
+
+
         /// <summary>
         /// Create a mechanism to create a Type
         /// </summary>
-
         public static BaseObjectTypeState CreateType(ReferenceNodeManager nodeManager, NodeId parentTypeNodeId)
         {
             BaseObjectTypeState type = null;

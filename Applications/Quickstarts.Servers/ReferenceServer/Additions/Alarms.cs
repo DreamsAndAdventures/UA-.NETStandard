@@ -38,26 +38,26 @@ namespace Quickstarts.ReferenceServer
         private bool m_allowEntry = false;
 
         private string[] m_conformanceUnits = {
-            "Basic",
-            "Alarm",
-            "Enable",
-            "Acknowledge",
-            "Confirm",
-            "Shelve",
-            "Comment",
-            "Suppression",
-            "OffNormal",
-            "SystemOffNormal",
-            "Refresh",
-            "Refresh2",
-            "Discrete",
-            "ExclusiveLimit",
-            "ExclusiveLevel",
-            "ExclusiveDeviation",
+            //"Basic",
+            //"Alarm",
+            //"Enable",
+            //"Acknowledge",
+            //"Confirm",
+            //"Shelve",
+            //"Comment",
+            //"Suppression",
+            //"OffNormal",
+            //"SystemOffNormal",
+            //"Refresh",
+            //"Refresh2",
+            //"Discrete",
+            //"ExclusiveLimit",
+            //"ExclusiveLevel",
+            //"ExclusiveDeviation",
             "ExclusiveRateOfChange",
-            "NonExclusiveLimit",
-            "NonExclusiveLevel",
-            "NonExclusiveDeviation",
+            //"NonExclusiveLimit",
+            //"NonExclusiveLevel",
+            //"NonExclusiveDeviation",
             "NonExclusiveRateOfChange"
         };
 
@@ -159,12 +159,26 @@ namespace Quickstarts.ReferenceServer
                 SourceController deviationSourceController = new SourceController(deviationTrigger, deviationAlarmController);
                 triggerMap.Add("Deviation", deviationSourceController);
 
+                int rateOfChangeInterval = interval;
+
                 string rateOfChangeTriggerName = "RateOfChangeSource";
                 string rateOfChangeTriggerNodeName = unitNodeName + "." + rateOfChangeTriggerName;
-                BaseDataVariableState rateOfChangeTrigger = Helpers.CreateVariable(unitFolder,
-                    NameSpaceIndex, rateOfChangeTriggerNodeName, rateOfChangeTriggerName);
+
+                // http://www.opcfoundation.org/UA/EngineeringUnits/UNECE/rec20_latest_08052015.zip
+                // http://www.opcfoundation.org/UA/EngineeringUnits/UNECE/UNECE_to_OPCUA.csv
+                EUInformation euInformation = new EUInformation("rad/s", "radian per second", "http://www.opcfoundation.org/UA/units/un/cefact");
+                euInformation.UnitId = 12865; // "2A"	
+
+
+
+                AnalogItemState rateOfChangeTrigger = m_nodeManager.CreateRateOfChangeSource(
+                    unitFolder, rateOfChangeTriggerNodeName, rateOfChangeTriggerName, (uint)BuiltInType.Int32, ValueRanks.Scalar,
+                    euInformation ); 
                 rateOfChangeTrigger.OnWriteValue = OnWriteAlarmTrigger;
-                AlarmController rateOfChangeAlarmController = (AlarmController)Activator.CreateInstance(controllerType, rateOfChangeTrigger, interval, false);
+
+                Type rateOfChangeControllerType = Type.GetType("Quickstarts.ReferenceServer.RateOfChangeController");
+                AlarmController rateOfChangeAlarmController = (AlarmController)Activator.CreateInstance(
+                    rateOfChangeControllerType, rateOfChangeTrigger, rateOfChangeInterval, false);
                 SourceController rateOfChangeSourceController = new SourceController(rateOfChangeTrigger, rateOfChangeAlarmController);
                 triggerMap.Add("RateOfChange", rateOfChangeSourceController);
 
@@ -314,14 +328,18 @@ namespace Quickstarts.ReferenceServer
                     optional: true);
                 m_alarms.Add(optionalDerivedExclusiveLevel.AlarmNodeName, optionalDerivedExclusiveLevel);
 
+                string rateOfChangeIntervalString = rateOfChangeInterval.ToString();
+                string mandatoryRateOfChange = rateOfChangeIntervalString + "Mandatory";
+                string optionalRateOfChange = rateOfChangeIntervalString + "Optional";
+
                 AlarmHolder exclusiveRateOfChangeMandatory = new ExclusiveRateOfChangeHolder(
                     this,
                     unitFolder,
                     rateOfChangeSourceController,
-                    mandatoryName,
+                    mandatoryRateOfChange,
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
-                    controllerType,
-                    interval,
+                    rateOfChangeControllerType,
+                    rateOfChangeInterval,
                     optional: false);
                 m_alarms.Add(exclusiveRateOfChangeMandatory.AlarmNodeName, exclusiveRateOfChangeMandatory);
 
@@ -329,10 +347,10 @@ namespace Quickstarts.ReferenceServer
                     this,
                     unitFolder,
                     rateOfChangeSourceController,
-                    optionalName,
+                    optionalRateOfChange,
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
-                    controllerType,
-                    interval,
+                    rateOfChangeControllerType,
+                    rateOfChangeInterval,
                     optional: true);
                 m_alarms.Add(exclusiveRateOfChangeOptional.AlarmNodeName, exclusiveRateOfChangeOptional);
 
@@ -428,16 +446,28 @@ namespace Quickstarts.ReferenceServer
                     optional: true);
                 m_alarms.Add(optionalDerivedNonExclusiveLevel.AlarmNodeName, optionalDerivedNonExclusiveLevel);
 
-                AlarmHolder nonExclusiveRateOfChange = new NonExclusiveRateOfChangeHolder(
+                AlarmHolder nonExclusiveRateOfChangeMandatory = new NonExclusiveRateOfChangeHolder(
                     this,
                     unitFolder,
                     rateOfChangeSourceController,
-                    intervalString,
+                    mandatoryRateOfChange,
                     GetSupportedAlarmConditionType(ref conditionTypeIndex),
-                    controllerType,
-                    interval,
-                    optional: GetUseOptional(unitName, ref useOptional));
-                m_alarms.Add(nonExclusiveRateOfChange.AlarmNodeName, nonExclusiveRateOfChange);
+                    rateOfChangeControllerType,
+                    rateOfChangeInterval,
+                    optional: false);
+                m_alarms.Add(nonExclusiveRateOfChangeMandatory.AlarmNodeName, nonExclusiveRateOfChangeMandatory);
+
+                AlarmHolder nonExclusiveRateOfChangeOptional = new NonExclusiveRateOfChangeHolder(
+                    this,
+                    unitFolder,
+                    rateOfChangeSourceController,
+                    optionalRateOfChange,
+                    GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                    rateOfChangeControllerType,
+                    rateOfChangeInterval,
+                    optional: true);
+                m_alarms.Add(nonExclusiveRateOfChangeOptional.AlarmNodeName, nonExclusiveRateOfChangeOptional);
+
 
                 AlarmHolder nonExclusiveMandatoryDeviation = new NonExclusiveDeviationHolder(
                     this,

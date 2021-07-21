@@ -123,7 +123,7 @@ namespace Quickstarts.ReferenceServer
                 {
                     severity = Defines.LOWLOW_SEVERITY;
                 }
-                else if (controller.Deviation >= Defines.DEVIATION_LOW_ALARM)
+                else if (controller.Deviation <= Defines.DEVIATION_LOW_ALARM)
                 {
                     severity = Defines.LOW_SEVERITY;
                 }

@@ -1459,7 +1459,7 @@ namespace Quickstarts.ReferenceServer
                 }
 
                 AddPredefinedNode(SystemContext, root);
-                m_simulationTimer = new Timer(DoSimulation, null, 500, 500);
+                m_simulationTimer = new Timer(DoSimulation, null, 100, 100);
             }
         }
 
@@ -1721,7 +1721,7 @@ namespace Quickstarts.ReferenceServer
         /// <summary>
         /// Creates a new variable.
         /// </summary>
-        private AnalogItemState CreateAnalogItemVariable(NodeState parent, string path, string name, BuiltInType dataType, int valueRank)
+        public AnalogItemState CreateAnalogItemVariable(NodeState parent, string path, string name, BuiltInType dataType, int valueRank)
         {
             return (CreateAnalogItemVariable(parent, path, name, dataType, valueRank, null));
         }
@@ -1806,6 +1806,87 @@ namespace Quickstarts.ReferenceServer
             // The mapping of the UNECE codes to OPC UA(EUInformation.unitId) is available here:
             // http://www.opcfoundation.org/UA/EngineeringUnits/UNECE/UNECE_to_OPCUA.csv
             variable.EngineeringUnits.Value.UnitId = 12890; // "2Z"
+            variable.OnWriteValue = OnWriteAnalog;
+            variable.EURange.OnWriteValue = OnWriteAnalogRange;
+            variable.EURange.AccessLevel = AccessLevels.CurrentReadOrWrite;
+            variable.EURange.UserAccessLevel = AccessLevels.CurrentReadOrWrite;
+            variable.EngineeringUnits.AccessLevel = AccessLevels.CurrentReadOrWrite;
+            variable.EngineeringUnits.UserAccessLevel = AccessLevels.CurrentReadOrWrite;
+            variable.InstrumentRange.OnWriteValue = OnWriteAnalogRange;
+            variable.InstrumentRange.AccessLevel = AccessLevels.CurrentReadOrWrite;
+            variable.InstrumentRange.UserAccessLevel = AccessLevels.CurrentReadOrWrite;
+
+            if (parent != null)
+            {
+                parent.AddChild(variable);
+            }
+
+            return variable;
+        }
+
+        /// <summary>
+        /// Creates an analog value with specific EUInformation specifically for RateOfChange Source Variables.
+        /// </summary>
+        public AnalogItemState CreateRateOfChangeSource(
+            NodeState parent,
+            string path,
+            string name,
+            NodeId dataType,
+            int valueRank,
+            EUInformation euInformation)
+        {
+            AnalogItemState variable = new AnalogItemState(parent);
+            variable.BrowseName = new QualifiedName(path, NamespaceIndex);
+            variable.EngineeringUnits = new PropertyState<EUInformation>(variable);
+            variable.InstrumentRange = new PropertyState<Range>(variable);
+
+            variable.Create(
+                SystemContext,
+                new NodeId(path, NamespaceIndex),
+                variable.BrowseName,
+                null,
+                true);
+
+            variable.NodeId = new NodeId(path, NamespaceIndex);
+            variable.SymbolicName = name;
+            variable.DisplayName = new LocalizedText("en", name);
+            variable.WriteMask = AttributeWriteMask.None;
+            variable.UserWriteMask = AttributeWriteMask.None;
+            variable.ReferenceTypeId = ReferenceTypes.Organizes;
+            variable.DataType = dataType;
+            variable.ValueRank = valueRank;
+            variable.AccessLevel = AccessLevels.CurrentReadOrWrite;
+            variable.UserAccessLevel = AccessLevels.CurrentReadOrWrite;
+            variable.Historizing = false;
+
+            if (valueRank == ValueRanks.OneDimension)
+            {
+                variable.ArrayDimensions = new ReadOnlyList<uint>(new List<uint> { 0 });
+            }
+            else if (valueRank == ValueRanks.TwoDimensions)
+            {
+                variable.ArrayDimensions = new ReadOnlyList<uint>(new List<uint> { 0, 0 });
+            }
+
+            BuiltInType builtInType = Opc.Ua.TypeInfo.GetBuiltInType(dataType, Server.TypeTree);
+
+            Range newRange = GetAnalogRange(builtInType);
+            newRange.High = Math.Min(newRange.High, 240);
+            newRange.Low = Math.Max(newRange.Low, -15);
+            variable.InstrumentRange.Value = newRange;
+
+            variable.EURange.Value = new Range(240, -15);
+
+            variable.Value = Defines.RATEOFCHANGE_MAXIMUM / 2;
+
+            variable.StatusCode = StatusCodes.Good;
+            variable.Timestamp = DateTime.UtcNow;
+            // The latest UNECE version (Rev 11, published in 2015) is available here:
+            // http://www.opcfoundation.org/UA/EngineeringUnits/UNECE/rec20_latest_08052015.zip
+            variable.EngineeringUnits.Value = euInformation;
+            // The mapping of the UNECE codes to OPC UA(EUInformation.unitId) is available here:
+            // http://www.opcfoundation.org/UA/EngineeringUnits/UNECE/UNECE_to_OPCUA.csv
+            variable.EngineeringUnits.Value.UnitId = 4403766; // "C26"
             variable.OnWriteValue = OnWriteAnalog;
             variable.EURange.OnWriteValue = OnWriteAnalogRange;
             variable.EURange.AccessLevel = AccessLevels.CurrentReadOrWrite;

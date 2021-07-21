@@ -97,7 +97,7 @@ namespace Quickstarts.ReferenceServer
             return valueSet;
         }
 
-        private void SetNextInterval()
+        protected virtual void SetNextInterval()
         {
             m_nextTime = DateTime.Now;
 
