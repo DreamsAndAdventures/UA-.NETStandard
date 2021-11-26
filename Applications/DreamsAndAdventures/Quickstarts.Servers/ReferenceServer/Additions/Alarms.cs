@@ -38,27 +38,27 @@ namespace DreamsAndAdventures.ReferenceServer
         private bool m_allowEntry = false;
 
         private string[] m_conformanceUnits = {
-            //"Basic",
-            //"Alarm",
-            //"Enable",
-            //"Acknowledge",
-            //"Confirm",
-            //"Shelve",
-            //"Comment",
-            //"Suppression",
-            //"OffNormal",
-            //"SystemOffNormal",
-            //"Refresh",
-            //"Refresh2",
-            //"Discrete",
-            //"ExclusiveLimit",
-            //"ExclusiveLevel",
-            //"ExclusiveDeviation",
-            //"ExclusiveRateOfChange",
-            //"NonExclusiveLimit",
-            //"NonExclusiveLevel",
-            //"NonExclusiveDeviation",
-            //"NonExclusiveRateOfChange",
+            "Basic",
+            "Alarm",
+            "Enable",
+            "Acknowledge",
+            "Confirm",
+            "Shelve",
+            "Comment",
+            "Suppression",
+            "OffNormal",
+            "SystemOffNormal",
+            "Refresh",
+            "Refresh2",
+            "Discrete",
+            "ExclusiveLimit",
+            "ExclusiveLevel",
+            "ExclusiveDeviation",
+            "ExclusiveRateOfChange",
+            "NonExclusiveLimit",
+            "NonExclusiveLevel",
+            "NonExclusiveDeviation",
+            "NonExclusiveRateOfChange",
             "Branch",
             "Instances"
         };
@@ -759,9 +759,128 @@ namespace DreamsAndAdventures.ReferenceServer
                 Debug.WriteLine("Completed alarms for " + unitName);
             }
 
+            CheckAlarms(alarmsFolder);
+
             m_allowEntry = true;
 
         }
+
+        public void CheckAlarms(FolderState alarmsFolder)
+        {
+            Dictionary<string, List<AlarmCheck>> alarmChecks = new Dictionary<string, List<AlarmCheck>>();
+
+            Dictionary<string, AlarmHolder>.ValueCollection values = m_alarms.Values;
+            ISystemContext systemContext = null;
+            foreach( AlarmHolder alarmHolder  in m_alarms.Values )
+            {
+                systemContext = alarmHolder.SystemContext;
+                break;
+            }
+
+            DialogConditionState dialog = new DialogConditionState(alarmsFolder);
+
+            dialog.Create(systemContext, new NodeId("Dialog", NameSpaceIndex),
+                new QualifiedName("Dialog", NameSpaceIndex),
+                new LocalizedText("Dialog"), true);
+
+            List<BaseInstanceState> dialogChildren = new List<BaseInstanceState>();
+
+            dialog.GetChildren(systemContext, dialogChildren);
+
+            CheckAlarms(systemContext, alarmChecks, dialog, dialogChildren);
+
+
+            foreach ( AlarmHolder alarmHolder in m_alarms.Values )
+            {
+                BaseEventState alarm = alarmHolder.Alarm;
+
+                List<BaseInstanceState> children = new List<BaseInstanceState>();
+
+                alarm.GetChildren(alarmHolder.SystemContext, children);
+
+                CheckAlarms(alarmHolder.SystemContext, alarmChecks, alarm, children);
+            }
+            foreach( KeyValuePair< string, List<AlarmCheck>> pair in alarmChecks)
+            {
+                List<AlarmCheck> checks = pair.Value;
+                string methodName = pair.Key;
+
+                //GetNodeManager().m_logger.Information( "Method " + pair.Key.ToString() + ":" + methodName 
+                //    + " has " + pair.Value.Count.ToString() + " checks" );
+                uint existsCount = 0;
+                uint nonExistsCount = 0;
+                List<string> nonExistingAlarms = new List<string>();
+                foreach( AlarmCheck check in pair.Value )
+                {
+                    if ( check.Exists )
+                    {
+                        existsCount++;
+                    }
+                    else
+                    {
+                        nonExistsCount++;
+                        nonExistingAlarms.Add(check.AlarmName);
+                    }
+                }
+
+                if ( existsCount > 0 )
+                {
+                    foreach( string name in nonExistingAlarms )
+                    {
+                        GetNodeManager().m_logger.Information("Unexpected Method " + methodName + " Alarm " +
+                            name + " doesn't exist when there are successes ");
+                    }
+                }
+
+                GetNodeManager().m_logger.Information("Method " + pair.Key + " Exists " + existsCount + " Non " + nonExistsCount.ToString() );
+            }
+        }
+
+        public void CheckAlarms(
+            ISystemContext systemContext,
+            Dictionary<string, List<AlarmCheck>> alarmChecks,
+            BaseEventState alarm,
+            List<BaseInstanceState> children )
+        {
+            foreach (BaseInstanceState child in children)
+            {
+                string name = child.SymbolicName;
+
+                MethodState possibleMethod = child as MethodState;
+                if (possibleMethod != null)
+                {
+                    AlarmCheck alarmCheck = new AlarmCheck();
+                    alarmCheck.AlarmName = alarm.NodeId.ToString();
+                    alarmCheck.MethodName = name;
+                    alarmCheck.Exists = false;
+
+                    NodeId methodDeclarationId = possibleMethod.MethodDeclarationId;
+                    alarmCheck.MethodDeclarationId = methodDeclarationId;
+                    if (methodDeclarationId != null && !methodDeclarationId.IsNullNodeId)
+                    {
+                        alarmCheck.Exists = true;
+                    }
+
+                    uint id = possibleMethod.NumericId;
+                    if (!alarmChecks.ContainsKey(name))
+                    {
+                        List<AlarmCheck> list = new List<AlarmCheck>();
+                        alarmChecks.Add(name, list);
+                    }
+
+                    List<AlarmCheck> checkList = alarmChecks[name];
+                    checkList.Add(alarmCheck);
+                }
+                else
+                {
+                    List<BaseInstanceState> subChildren = new List<BaseInstanceState>();
+                    child.GetChildren(systemContext, subChildren);
+                    CheckAlarms(systemContext, alarmChecks, alarm, subChildren);
+                }
+            }
+
+        }
+
 
         public void CreateTestItems(FolderState alarmsFolder)
         {
@@ -814,6 +933,7 @@ namespace DreamsAndAdventures.ReferenceServer
                 optional = !optional;
                 returnValue = optional;
             }
+
             return returnValue;
         }
 
