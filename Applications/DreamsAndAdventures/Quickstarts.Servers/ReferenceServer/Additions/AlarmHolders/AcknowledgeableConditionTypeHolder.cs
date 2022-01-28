@@ -242,7 +242,9 @@ namespace DreamsAndAdventures.ReferenceServer
                 Log("OnAcknowledge", "Optional Is False, ignoring confirmed State");
             }
 
-            // This will need to go away
+            m_alarmController.OnAcknowledge();
+
+            // TODO This will need to go away
             alarm.Retain.Value = GetRetainState();
 
             return ServiceResult.Good;
@@ -284,6 +286,9 @@ namespace DreamsAndAdventures.ReferenceServer
 
             alarm.Message.Value = "User Confirmed Event " + DateTime.Now.ToShortTimeString();
 
+            m_alarmController.OnAcknowledge();
+
+            // TODO Go Away?
             alarm.Retain.Value = GetRetainState();
 
             return ServiceResult.Good;

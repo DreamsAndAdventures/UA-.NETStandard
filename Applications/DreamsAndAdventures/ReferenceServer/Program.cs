@@ -62,20 +62,27 @@ namespace DreamsAndAdventures.ReferenceServer
 
                 LoggerConfiguration loggerConfiguration = new LoggerConfiguration();
 
-                string logFileDirectory = "e:\\";
-                string logFileName = logFileDirectory + "serverLog.txt";
-                DirectoryInfo directoryInfo = new DirectoryInfo(logFileDirectory);
-                if ( directoryInfo.Exists )
-                {
-                    loggerConfiguration.WriteTo.File(@"e:\serverLog.txt", Serilog.Events.LogEventLevel.Verbose);
-                }
-
 #if DEBUG
                 // loggerConfiguration.WriteTo.Debug(restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Warning);
                 loggerConfiguration.WriteTo.Debug(restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Verbose);
                 config.TraceConfiguration.TraceMasks = Utils.TraceMasks.Operation;
 #endif
-//                SerilogTraceLogger.Create(loggerConfiguration, config, level);
+
+                if ( config.TraceConfiguration != null &&
+                    config.TraceConfiguration.OutputFilePath != null &&
+                    config.TraceConfiguration.OutputFilePath.Length > 0 )
+                {
+                    FileInfo fileInfo = new FileInfo(
+                        Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData) +
+                        config.TraceConfiguration.OutputFilePath);
+                    Directory.CreateDirectory(fileInfo.DirectoryName);
+                    DirectoryInfo traceDirectory = new DirectoryInfo(fileInfo.DirectoryName);
+                    if ( traceDirectory.Exists )
+                    {
+                        loggerConfiguration.WriteTo.File(fileInfo.FullName, Serilog.Events.LogEventLevel.Verbose);
+                    }
+                }
+
                 Serilog.Core.Logger logger = loggerConfiguration.CreateLogger();
                
 

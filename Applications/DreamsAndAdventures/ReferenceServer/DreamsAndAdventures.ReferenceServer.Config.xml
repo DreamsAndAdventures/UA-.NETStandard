@@ -8,7 +8,6 @@
   <ApplicationUri>urn:localhost:UA:DreamsAndAdventures:ReferenceServer</ApplicationUri>
   <ProductUri>uri:opcfoundation.org:DreamsAndAdventures:ReferenceServer</ProductUri>
   <ApplicationType>Server_0</ApplicationType>
-  <LogFile>e:\serverLog.txt</LogFile>
   
   <SecurityConfiguration>
 
@@ -276,7 +275,7 @@
   </Extensions>
 
   <TraceConfiguration>
-    <OutputFilePath>Logs\DreamsAndAdventures.ReferenceServer.log.txt</OutputFilePath>
+    <OutputFilePath>\DreamsAndAdventures\Logs\DreamsAndAdventures.ReferenceServer.log.txt</OutputFilePath>
     <DeleteOnLoad>true</DeleteOnLoad>
     <!-- Show Only Errors -->
     <!-- <TraceMasks>1</TraceMasks> -->
@@ -290,6 +289,7 @@
     <!-- <TraceMasks>523</TraceMasks> -->
     <!-- Show Only Security, ServiceResultExceptions, Errors and Trace -->
     <!-- <TraceMasks>519</TraceMasks> -->
+    <TraceMasks>519</TraceMasks>
   </TraceConfiguration>
   
 </ApplicationConfiguration>
