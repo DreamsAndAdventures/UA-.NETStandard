@@ -142,7 +142,7 @@ namespace TestData
             {
                 // ensure the namespace used by the node manager is in the server's namespace table.
                 m_typeNamespaceIndex = Server.NamespaceUris.GetIndexOrAppend(Namespaces.TestData);
-                m_namespaceIndex = Server.NamespaceUris.GetIndexOrAppend(Namespaces.TestData + "/Instance");
+                m_namespaceIndex = Server.NamespaceUris.GetIndexOrAppend(Namespaces.TestData + "Instance");
 
                 base.CreateAddressSpace(externalReferences);
 
@@ -699,7 +699,7 @@ namespace TestData
                 }
                 catch (Exception e)
                 {
-                    Utils.Trace(e, "Unexpected error monitoring system status.");
+                    Utils.LogError(e, "Unexpected error monitoring system status.");
                 }
             }
 #endif
