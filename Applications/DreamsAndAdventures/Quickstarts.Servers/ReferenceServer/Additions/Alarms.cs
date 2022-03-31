@@ -37,6 +37,13 @@ namespace DreamsAndAdventures.ReferenceServer
 
         private bool m_allowEntry = false;
 
+        private BaseDataVariableState m_normalState;
+
+        public BaseDataVariableState NormalState
+        {
+            get { return m_normalState; }
+        }
+
         private string[] m_conformanceUnits = {
             "Basic",
             "Alarm",
@@ -88,6 +95,13 @@ namespace DreamsAndAdventures.ReferenceServer
             string alarmsName = "Alarms";
             string alarmsNodeName = alarmsName;
             FolderState alarmsFolder = Helpers.CreateFolder(root, NameSpaceIndex, alarmsNodeName, alarmsName);
+
+            // Create a NormalState
+            string normalState = "NormalState";
+            string normalStateNodeName = normalState;
+            m_normalState = Helpers.CreateVariable(alarmsFolder,
+                NameSpaceIndex, normalStateNodeName, normalState, boolValue: true);
+
 
             CreateTestItems(alarmsFolder);
 

@@ -45,7 +45,7 @@ namespace DreamsAndAdventures.ReferenceServer
 
             base.Initialize(alarmTypeIdentifier, name, maxTimeShelved);
 
-            alarm.NormalState.Value = new NodeId();
+            alarm.NormalState.Value = m_alarms.NormalState.NodeId;
         }
 
         #region Helpers
