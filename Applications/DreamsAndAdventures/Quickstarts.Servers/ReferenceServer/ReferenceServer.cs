@@ -55,6 +55,7 @@ namespace DreamsAndAdventures.ReferenceServer
         public ReferenceServer(Serilog.Core.Logger logger)
         {
             m_logger = logger;
+            m_breakTheModel = false;
         }
 
         #region Overridden Methods
@@ -73,10 +74,13 @@ namespace DreamsAndAdventures.ReferenceServer
             List<INodeManager> nodeManagers = new List<INodeManager>();
 
             // create the custom node managers.
-            nodeManagers.Add(new ReferenceNodeManager(server, configuration, m_logger));
+            m_referenceNodeManager = new ReferenceNodeManager(server, configuration, m_logger, this);
+            nodeManagers.Add(m_referenceNodeManager);
 
             // create master node manager.
-            return new MasterNodeManager(server, configuration, null, nodeManagers.ToArray());
+            m_masterNodeManager = new MasterNodeManager(server, configuration, null, nodeManagers.ToArray());
+
+            return m_masterNodeManager;
         }
 
         /// <summary>
@@ -161,6 +165,96 @@ namespace DreamsAndAdventures.ReferenceServer
             { }
 
         }
+
+        /// <summary>
+        /// Invokes the Browse service.  Direct copy from StandardServer.cs, with extras added
+        /// </summary>
+        /// <param name="requestHeader">The request header.</param>
+        /// <param name="view">The view.</param>
+        /// <param name="requestedMaxReferencesPerNode">The maximum number of references to return for each node.</param>
+        /// <param name="nodesToBrowse">The list of nodes to browse.</param>
+        /// <param name="results">The list of results for the passed starting nodes and filters.</param>
+        /// <param name="diagnosticInfos">The diagnostic information for the results.</param>
+        /// <returns>
+        /// Returns a <see cref="ResponseHeader"/> object
+        /// </returns>
+        public override ResponseHeader Browse(
+            RequestHeader requestHeader,
+            ViewDescription view,
+            uint requestedMaxReferencesPerNode,
+            BrowseDescriptionCollection nodesToBrowse,
+            out BrowseResultCollection results,
+            out DiagnosticInfoCollection diagnosticInfos)
+        {
+            results = null;
+            diagnosticInfos = null;
+
+            OperationContext context = ValidateRequest(requestHeader, RequestType.Browse);
+
+            try
+            {
+                ValidateOperationLimits(nodesToBrowse,
+                    ServerInternal.ServerObject.ServerCapabilities.OperationLimits.MaxNodesPerBrowse);
+
+                m_masterNodeManager.Browse(
+                    context,
+                    view,
+                    requestedMaxReferencesPerNode,
+                    nodesToBrowse,
+                    out results,
+                    out diagnosticInfos);
+
+                for ( int index = 0; index < nodesToBrowse.Count; index++ )
+                {
+                    BrowseDescription browseDescription = nodesToBrowse[index];
+
+                    if (browseDescription.NodeId.NamespaceIndex == m_referenceNodeManager.NamespaceIndex && 
+                        browseDescription.NodeId.IdType.Equals(IdType.String) )
+                    {
+                        string nodeName = (string)browseDescription.NodeId.Identifier;
+                        if (nodeName == "Alarms" || nodeName == "Alarms.Acknowledge")
+                        {
+                            string name = "BreakTheModel";
+                            ReferenceDescription breakTheModelReferenceDescription = new ReferenceDescription() {
+                                BrowseName = new QualifiedName(name, m_referenceNodeManager.NamespaceIndex),
+                                DisplayName = new LocalizedText(name),
+                                IsForward = true,
+                                NodeClass = Opc.Ua.NodeClass.Object,
+                                ReferenceTypeId = Opc.Ua.ReferenceTypeIds.Organizes,
+                                TypeDefinition = Opc.Ua.ObjectTypeIds.FolderType,
+                                Unfiltered = false,
+                                NodeId = new ExpandedNodeId( new NodeId( name, m_referenceNodeManager.NamespaceIndex))
+                            };
+                            BrowseResult addToResult = results[index];
+                            //addToResult.References.Add(breakTheModelReferenceDescription);
+
+                            break;
+                        }
+                    }
+                }
+
+                return CreateResponse(requestHeader, context.StringTable);
+            }
+            catch (ServiceResultException e)
+            {
+                lock (ServerInternal.DiagnosticsWriteLock)
+                {
+                    ServerInternal.ServerDiagnostics.RejectedRequestsCount++;
+
+                    if (IsSecurityError(e.StatusCode))
+                    {
+                        ServerInternal.ServerDiagnostics.SecurityRejectedRequestsCount++;
+                    }
+                }
+
+                throw TranslateException(context, e);
+            }
+            finally
+            {
+                OnRequestComplete(context);
+            }
+        }
+
         #endregion
 
         #region Archie
@@ -360,9 +454,21 @@ namespace DreamsAndAdventures.ReferenceServer
         }
         #endregion
 
+        /// <summary>
+        /// 
+        /// </summary>
+        public bool BreakTheModel
+        {
+            get { return m_breakTheModel; }
+            set { m_breakTheModel = value;  }
+        }
+
         #region Private Fields
         private ICertificateValidator m_userCertificateValidator;
         private Serilog.Core.Logger m_logger;
+        private MasterNodeManager m_masterNodeManager;
+        private ReferenceNodeManager m_referenceNodeManager;
+        private bool m_breakTheModel = false;
         #endregion
     }
 }

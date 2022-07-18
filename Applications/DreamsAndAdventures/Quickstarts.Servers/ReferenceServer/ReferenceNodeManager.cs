@@ -58,9 +58,11 @@ namespace DreamsAndAdventures.ReferenceServer
     //    public ReferenceNodeManager(IServerInternal server, ApplicationConfiguration configuration, Serilog.Core.Logger logger)
     //: base(server, configuration, Namespaces.ReferenceApplications)
 
-        public ReferenceNodeManager(IServerInternal server, ApplicationConfiguration configuration, Serilog.Core.Logger logger)
+        public ReferenceNodeManager(IServerInternal server, ApplicationConfiguration configuration, Serilog.Core.Logger logger, ReferenceServer myServer)
             : base(server, configuration, Namespaces.ReferenceServer)
         {
+            m_dreamsServer = myServer;
+
             SystemContext.NodeIdFactory = this;
 
             // get the configuration for the node manager.
@@ -220,6 +222,12 @@ namespace DreamsAndAdventures.ReferenceServer
                     }
 
                     m_alarms.CreateAlarms(root);
+
+                    BaseDataVariableState breakControl = CreateVariable(root, "BreakTheModelControl", "BreakTheModelControl", DataTypeIds.Boolean, ValueRanks.Scalar);
+                    breakControl.OnWriteValue = OnWriteBreakControl;
+
+                    //variables.Add(CreateVariable(root,
+                    //    "BreakTheModelControl", "BreakTheModelControl", DataTypeIds.Boolean, ValueRanks.Scalar));
 
                     #endregion
 #if ARCHIE_ENABLE_CONTENT
@@ -2777,6 +2785,7 @@ namespace DreamsAndAdventures.ReferenceServer
                         variable.Timestamp = DateTime.UtcNow;
                         variable.ClearChangeMasks(SystemContext, false);
                     }
+                    
                 }
                 m_alarms.Loop();
             }
@@ -2871,6 +2880,8 @@ namespace DreamsAndAdventures.ReferenceServer
         /// Implement Logger to write to file
         /// </summary>
         public Serilog.Core.Logger m_logger;
+        private ReferenceServer m_dreamsServer;
+
 
         /// <summary>
         /// Provide a mechanism to add a predefined node, only derived
@@ -3089,6 +3100,36 @@ namespace DreamsAndAdventures.ReferenceServer
 
             // all done.
             return ServiceResult.Good;
+        }
+
+        /// <summary>
+        /// Write the Break Control Value
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="node"></param>
+        /// <param name="indexRange"></param>
+        /// <param name="dataEncoding"></param>
+        /// <param name="value"></param>
+        /// <param name="statusCode"></param>
+        /// <param name="timestamp"></param>
+        /// <returns></returns>
+        public ServiceResult OnWriteBreakControl(
+            ISystemContext context,
+            NodeState node,
+            NumericRange indexRange,
+            QualifiedName dataEncoding,
+            ref object value,
+            ref StatusCode statusCode,
+            ref DateTime timestamp)
+        {
+            Type valueType = value.GetType();
+
+            if (valueType.Name == "Boolean")
+            {
+                m_dreamsServer.BreakTheModel = (bool)value;
+            }
+
+            return Opc.Ua.StatusCodes.Good;
         }
 
 
