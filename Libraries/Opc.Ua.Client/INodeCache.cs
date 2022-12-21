@@ -27,9 +27,7 @@
  * http://opcfoundation.org/License/MIT/1.00/
  * ======================================================================*/
 
-using System;
 using System.Collections.Generic;
-using System.Reflection;
 
 namespace Opc.Ua.Client
 {
@@ -55,6 +53,18 @@ namespace Opc.Ua.Client
         Node FetchNode(ExpandedNodeId nodeId);
 
         /// <summary>
+        /// Finds a set of nodes in the nodeset,
+        /// fetches missing nodes from server.
+        /// </summary>
+        /// <param name="nodeIds">The node identifier collection.</param>
+        IList<INode> Find(IList<ExpandedNodeId> nodeIds);
+
+        /// <summary>
+        /// Fetches a node collection from the server and updates the cache.
+        /// </summary>
+        IList<Node> FetchNodes(IList<ExpandedNodeId> nodeIds);
+
+        /// <summary>
         /// Adds the supertypes of the node to the cache.
         /// </summary>
         void FetchSuperTypes(ExpandedNodeId nodeId);
@@ -63,6 +73,11 @@ namespace Opc.Ua.Client
         /// Returns the references of the specified node that meet the criteria specified.
         /// </summary>
         IList<INode> FindReferences(ExpandedNodeId nodeId, NodeId referenceTypeId, bool isInverse, bool includeSubtypes);
+
+        /// <summary>
+        /// Returns the references of the specified nodes that meet the criteria specified.
+        /// </summary>
+        IList<INode> FindReferences(IList<ExpandedNodeId> nodeIds, IList<NodeId> referenceTypeIds, bool isInverse, bool includeSubtypes);
 
         /// <summary>
         /// Returns a display name for a node.

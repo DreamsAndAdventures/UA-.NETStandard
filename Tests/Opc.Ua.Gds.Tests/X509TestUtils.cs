@@ -93,7 +93,9 @@ namespace Opc.Ua.Gds.Tests
             Assert.False(signedCert.HasPrivateKey);
             Assert.True(X509Utils.CompareDistinguishedName(testApp.Subject, signedCert.Subject));
             Assert.False(X509Utils.CompareDistinguishedName(signedCert.Issuer, signedCert.Subject));
+            Assert.False(X509Utils.CompareDistinguishedName(signedCert.IssuerName, signedCert.SubjectName));
             Assert.True(X509Utils.CompareDistinguishedName(signedCert.Issuer, issuerCert.Subject));
+            Assert.True(X509Utils.CompareDistinguishedName(signedCert.IssuerName, issuerCert.SubjectName));
             TestContext.Out.WriteLine($"Signed Subject: {signedCert.Subject}");
             TestContext.Out.WriteLine($"Issuer Subject: {issuerCert.Subject}");
 
@@ -127,7 +129,7 @@ namespace Opc.Ua.Gds.Tests
             Assert.True(enhancedKeyUsage.Critical);
 
             // test for authority key
-            X509AuthorityKeyIdentifierExtension authority = X509Extensions.FindExtension<X509AuthorityKeyIdentifierExtension>(signedCert);
+            var authority = X509Extensions.FindExtension<Ua.Security.Certificates.X509AuthorityKeyIdentifierExtension>(signedCert);
             Assert.NotNull(authority);
             TestContext.Out.WriteLine($"Authority Key Identifier: {authority.Format(true)}");
             Assert.NotNull(authority.SerialNumber);

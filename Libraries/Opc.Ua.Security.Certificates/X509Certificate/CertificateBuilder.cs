@@ -30,10 +30,10 @@
 #if NETSTANDARD2_1 || NET472_OR_GREATER || NET5_0_OR_GREATER
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-using System.Linq;
-using System.Collections.Generic;
 
 namespace Opc.Ua.Security.Certificates
 {
@@ -105,7 +105,6 @@ namespace Opc.Ua.Security.Certificates
             var serialNumber = m_serialNumber.Reverse().ToArray();
             if (IssuerCAKeyCert != null)
             {
-                var issuerSubjectName = IssuerCAKeyCert.SubjectName;
                 using (RSA rsaIssuerKey = IssuerCAKeyCert.GetRSAPrivateKey())
                 {
                     signedCert = request.Create(
@@ -295,14 +294,16 @@ namespace Opc.Ua.Security.Certificates
         public override ICertificateBuilderCreateForRSAAny SetRSAPublicKey(byte[] publicKey)
         {
             if (publicKey == null) throw new ArgumentNullException(nameof(publicKey));
-#if NET472_OR_GREATER
-            throw new NotSupportedException("Import a RSAPublicKey is not supported on this platform.");
-#else
             int bytes = 0;
             try
             {
+#if NET472_OR_GREATER
+                m_rsaPublicKey = BouncyCastle.X509Utils.SetRSAPublicKey(publicKey);
+                bytes = publicKey.Length;
+#else
                 m_rsaPublicKey = RSA.Create();
                 m_rsaPublicKey.ImportSubjectPublicKeyInfo(publicKey, out bytes);
+#endif
             }
             catch (Exception e)
             {
@@ -314,7 +315,6 @@ namespace Opc.Ua.Security.Certificates
                 throw new ArgumentException("Decoded the public key but extra bytes were found.");
             }
             return this;
-#endif
         }
         #endregion
 
@@ -341,65 +341,81 @@ namespace Opc.Ua.Security.Certificates
         private void CreateX509Extensions(CertificateRequest request, bool forECDsa)
         {
             // Basic Constraints
-            X509BasicConstraintsExtension bc = GetBasicContraints();
-            request.CertificateExtensions.Add(bc);
+            if (X509Extensions.FindExtension<X509BasicConstraintsExtension>(m_extensions) == null)
+            {
+                X509BasicConstraintsExtension bc = GetBasicContraints();
+                request.CertificateExtensions.Add(bc);
+            }
 
             // Subject Key Identifier
             var ski = new X509SubjectKeyIdentifierExtension(
                 request.PublicKey,
                 X509SubjectKeyIdentifierHashAlgorithm.Sha1,
                 false);
-            request.CertificateExtensions.Add(ski);
+            if (X509Extensions.FindExtension<X509SubjectKeyIdentifierExtension>(m_extensions) == null)
+            {
+                request.CertificateExtensions.Add(ski);
+            }
 
             // Authority Key Identifier
-            X509Extension authorityKeyIdentifier = IssuerCAKeyCert != null
-                ? X509Extensions.BuildAuthorityKeyIdentifier(IssuerCAKeyCert)
-                : new X509AuthorityKeyIdentifierExtension(
-                    ski.SubjectKeyIdentifier.FromHexString(),
-                    IssuerName,
-                    m_serialNumber);
-            request.CertificateExtensions.Add(authorityKeyIdentifier);
-
-            X509KeyUsageFlags keyUsageFlags;
-            if (m_isCA)
+            if (X509Extensions.FindExtension<X509AuthorityKeyIdentifierExtension>(m_extensions) == null)
             {
-                keyUsageFlags = X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.KeyCertSign | X509KeyUsageFlags.CrlSign;
+                X509Extension authorityKeyIdentifier = IssuerCAKeyCert != null
+                    ? X509Extensions.BuildAuthorityKeyIdentifier(IssuerCAKeyCert)
+                    : new X509AuthorityKeyIdentifierExtension(
+                        ski.SubjectKeyIdentifier.FromHexString(),
+                        IssuerName,
+                        m_serialNumber);
+                request.CertificateExtensions.Add(authorityKeyIdentifier);
             }
-            else
+
+            // Key usage extensions
+            if (X509Extensions.FindExtension<X509KeyUsageExtension>(m_extensions) == null)
             {
-                if (forECDsa)
+                X509KeyUsageFlags keyUsageFlags;
+                if (m_isCA)
                 {
-                    // Key Usage for ECDsa
-                    keyUsageFlags = X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.NonRepudiation
-                        | X509KeyUsageFlags.KeyAgreement;
+                    keyUsageFlags = X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.KeyCertSign | X509KeyUsageFlags.CrlSign;
                 }
                 else
                 {
-                    // Key usage for RSA
-                    keyUsageFlags = X509KeyUsageFlags.DataEncipherment | X509KeyUsageFlags.KeyEncipherment
-                        | X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.NonRepudiation;
+                    if (forECDsa)
+                    {
+                        // Key Usage for ECDsa
+                        keyUsageFlags = X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.NonRepudiation
+                            | X509KeyUsageFlags.KeyAgreement;
+                    }
+                    else
+                    {
+                        // Key usage for RSA
+                        keyUsageFlags = X509KeyUsageFlags.DataEncipherment | X509KeyUsageFlags.KeyEncipherment
+                            | X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.NonRepudiation;
+                    }
+                    if (IssuerCAKeyCert == null)
+                    {
+                        // self signed case
+                        keyUsageFlags |= X509KeyUsageFlags.KeyCertSign;
+                    }
                 }
-                if (IssuerCAKeyCert == null)
-                {
-                    // self signed case
-                    keyUsageFlags |= X509KeyUsageFlags.KeyCertSign;
-                }
-            }
 
-            request.CertificateExtensions.Add(
-                                new X509KeyUsageExtension(
-                                    keyUsageFlags,
-                                    true));
+                request.CertificateExtensions.Add(
+                                    new X509KeyUsageExtension(
+                                        keyUsageFlags,
+                                        true));
+            }
 
             if (!m_isCA)
             {
-                // Enhanced key usage 
-                request.CertificateExtensions.Add(
+                if (X509Extensions.FindExtension<X509EnhancedKeyUsageExtension>(m_extensions) == null)
+                {
+                    // Enhanced key usage 
+                    request.CertificateExtensions.Add(
                     new X509EnhancedKeyUsageExtension(
                         new OidCollection {
                             new Oid(Oids.ServerAuthentication),
                             new Oid(Oids.ClientAuthentication)
                         }, true));
+                }
             }
 
             foreach (var extension in m_extensions)
@@ -416,8 +432,9 @@ namespace Opc.Ua.Security.Certificates
             // Basic constraints
             if (!m_isCA && IssuerCAKeyCert == null)
             {
-                // self signed
-                return new X509BasicConstraintsExtension(true, true, 0, true);
+                // see Mantis https://mantis.opcfoundation.org/view.php?id=8370
+                // self signed application certificates shall set the CA bit to false
+                return new X509BasicConstraintsExtension(false, false, 0, true);
             }
             else if (m_isCA && m_pathLengthConstraint >= 0)
             {

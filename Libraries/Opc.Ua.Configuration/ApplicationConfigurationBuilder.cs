@@ -247,7 +247,8 @@ namespace Opc.Ua.Configuration
         {
             if (addPolicy)
             {
-                AddSecurityPolicies(false, false, true);
+                var policies = ApplicationConfiguration.ServerConfiguration.SecurityPolicies;
+                InternalAddPolicy(policies, MessageSecurityMode.None, SecurityPolicies.None);
             }
             return this;
         }
@@ -321,6 +322,13 @@ namespace Opc.Ua.Configuration
         public IApplicationConfigurationBuilderSecurityOptions SetRejectUnknownRevocationStatus(bool rejectUnknownRevocationStatus)
         {
             ApplicationConfiguration.SecurityConfiguration.RejectUnknownRevocationStatus = rejectUnknownRevocationStatus;
+            return this;
+        }
+
+        /// <inheritdoc/>
+        public IApplicationConfigurationBuilderSecurityOptions SetUseValidatedCertificates(bool useValidatedCertificates)
+        {
+            ApplicationConfiguration.SecurityConfiguration.UseValidatedCertificates = useValidatedCertificates;
             return this;
         }
 
@@ -661,6 +669,13 @@ namespace Opc.Ua.Configuration
         }
 
         /// <inheritdoc/>
+        public IApplicationConfigurationBuilderServerOptions SetAuditingEnabled(bool auditingEnabled)
+        {
+            ApplicationConfiguration.ServerConfiguration.AuditingEnabled = auditingEnabled;
+            return this;
+        }
+
+        /// <inheritdoc/>
         public IApplicationConfigurationBuilderClientOptions SetDefaultSessionTimeout(int defaultSessionTimeout)
         {
             ApplicationConfiguration.ClientConfiguration.DefaultSessionTimeout = defaultSessionTimeout;
@@ -699,6 +714,13 @@ namespace Opc.Ua.Configuration
         public IApplicationConfigurationBuilderClientOptions SetReverseConnect(ReverseConnectClientConfiguration reverseConnect)
         {
             ApplicationConfiguration.ClientConfiguration.ReverseConnect = reverseConnect;
+            return this;
+        }
+
+        /// <inheritdoc/>
+        public IApplicationConfigurationBuilderClientOptions SetClientOperationLimits(OperationLimits operationLimits)
+        {
+            ApplicationConfiguration.ClientConfiguration.OperationLimits = operationLimits;
             return this;
         }
 

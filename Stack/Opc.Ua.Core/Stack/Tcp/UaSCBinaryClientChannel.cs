@@ -439,6 +439,7 @@ namespace Opc.Ua.Bindings
                 }
 
                 // update the max chunk count.
+                MaxRequestChunkCount = CalculateChunkCount(MaxRequestMessageSize, SendBufferSize);
                 if (maxChunkCount > 0 && maxChunkCount < MaxRequestChunkCount)
                 {
                     MaxRequestChunkCount = (int)maxChunkCount;
@@ -590,12 +591,12 @@ namespace Opc.Ua.Bindings
                 // check if it is necessary to wait for more chunks.
                 if (!TcpMessageType.IsFinal(messageType))
                 {
-                    SaveIntermediateChunk(requestId, messageBody);
+                    SaveIntermediateChunk(requestId, messageBody, false);
                     return false;
                 }
 
                 // get the chunks to process.
-                chunksToProcess = GetSavedChunks(requestId, messageBody);
+                chunksToProcess = GetSavedChunks(requestId, messageBody, false);
 
                 // read message body.
                 OpenSecureChannelResponse response = ParseResponse(chunksToProcess) as OpenSecureChannelResponse;
@@ -643,8 +644,9 @@ namespace Opc.Ua.Bindings
                 State = TcpChannelState.Open;
                 m_reconnecting = false;
 
-                // enable reconnects.
-                m_waitBetweenReconnects = TcpMessageLimits.MinTimeBetweenReconnects;
+                // enable reconnects. DO NOT USE! 
+                // m_waitBetweenReconnects = TcpMessageLimits.MinTimeBetweenReconnects;
+                m_waitBetweenReconnects = Timeout.Infinite;
 
                 // schedule reconnect before token expires.
                 ScheduleTokenRenewal(CurrentToken);
@@ -666,6 +668,16 @@ namespace Opc.Ua.Bindings
 
             return false;
         }
+
+        /// <summary>
+        /// Closes the channel in case the message limits have been exceeded
+        /// </summary>
+        protected override void DoMessageLimitsExceeded()
+        {
+            base.DoMessageLimitsExceeded();
+            Shutdown(new ServiceResult(StatusCodes.BadResponseTooLarge));
+        }
+
         #endregion
 
         #region Event Handlers
@@ -995,8 +1007,14 @@ namespace Opc.Ua.Bindings
         {
             lock (DataLock)
             {
+                // channel may already be closed
+                if (State == TcpChannelState.Closed)
+                {
+                    return;
+                }
+
                 // clear an unprocessed chunks.
-                SaveIntermediateChunk(0, new ArraySegment<byte>());
+                SaveIntermediateChunk(0, new ArraySegment<byte>(), false);
 
                 // halt any scheduled tasks.
                 if (m_handshakeTimer != null)
@@ -1087,7 +1105,7 @@ namespace Opc.Ua.Bindings
                 }
 
                 // clear an unprocessed chunks.
-                SaveIntermediateChunk(0, new ArraySegment<byte>());
+                SaveIntermediateChunk(0, new ArraySegment<byte>(), false);
 
                 // halt any scheduled tasks.
                 if (m_handshakeTimer != null)
@@ -1385,7 +1403,7 @@ namespace Opc.Ua.Bindings
                 if (TcpMessageType.IsAbort(messageType))
                 {
                     // get the chunks to process.
-                    chunksToProcess = GetSavedChunks(requestId, messageBody);
+                    chunksToProcess = GetSavedChunks(requestId, messageBody, false);
 
                     // decoder reason.
                     MemoryStream istrm = new MemoryStream(messageBody.Array, messageBody.Offset, messageBody.Count, false);
@@ -1401,12 +1419,12 @@ namespace Opc.Ua.Bindings
                 // check if it is necessary to wait for more chunks.
                 if (!TcpMessageType.IsFinal(messageType))
                 {
-                    SaveIntermediateChunk(requestId, messageBody);
+                    SaveIntermediateChunk(requestId, messageBody, false);
                     return true;
                 }
 
                 // get the chunks to process.
-                chunksToProcess = GetSavedChunks(requestId, messageBody);
+                chunksToProcess = GetSavedChunks(requestId, messageBody, false);
 
                 // get response.
                 operation.MessageBody = ParseResponse(chunksToProcess);

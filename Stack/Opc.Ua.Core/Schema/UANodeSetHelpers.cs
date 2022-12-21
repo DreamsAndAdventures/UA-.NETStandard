@@ -54,10 +54,8 @@ namespace Opc.Ua.Export
         /// <param name="istrm">The input stream.</param>
         public void Write(Stream istrm)
         {
-            var setting = Utils.DefaultXmlWriterSettings();
-            setting.CloseOutput = true;
-
-            var writer = XmlWriter.Create(istrm, setting);
+            XmlWriterSettings setting = Utils.DefaultXmlWriterSettings();
+            XmlWriter writer = XmlWriter.Create(istrm, setting);
 
             try
             {
@@ -384,7 +382,7 @@ namespace Opc.Ua.Export
             {
                 for (int ii = 0; ii < NamespaceUris.Length; ii++)
                 {
-                    namespaceUris.Append(NamespaceUris[ii]);
+                    namespaceUris.GetIndexOrAppend(NamespaceUris[ii]);
                 }
             }
 
@@ -392,11 +390,9 @@ namespace Opc.Ua.Export
 
             if (ServerUris != null)
             {
-                serverUris.Append(context.ServerUris.GetString(0));
-
                 for (int ii = 0; ii < ServerUris.Length; ii++)
                 {
-                    serverUris.Append(ServerUris[ii]);
+                    serverUris.GetIndexOrAppend(ServerUris[ii]);
                 }
             }
 
@@ -424,7 +420,7 @@ namespace Opc.Ua.Export
             {
                 for (int ii = 0; ii < NamespaceUris.Length; ii++)
                 {
-                    namespaceUris.Append(NamespaceUris[ii]);
+                    namespaceUris.GetIndexOrAppend(NamespaceUris[ii]);
                 }
             }
 
@@ -432,11 +428,9 @@ namespace Opc.Ua.Export
 
             if (ServerUris != null)
             {
-                serverUris.Append(context.ServerUris.GetString(0));
-
                 for (int ii = 0; ii < ServerUris.Length; ii++)
                 {
-                    serverUris.Append(ServerUris[ii]);
+                    serverUris.GetIndexOrAppend(ServerUris[ii]);
                 }
             }
 
@@ -882,7 +876,7 @@ namespace Opc.Ua.Export
 
             if (sd != null)
             {
-                if (sd.StructureType == StructureType.Union || sd.StructureType == (StructureType)4) // StructureType.UnionWithSubtypedValues)
+                if (sd.StructureType == StructureType.Union || sd.StructureType == StructureType.UnionWithSubtypedValues)
                 {
                     definition.IsUnion = true;
                 }
@@ -905,8 +899,8 @@ namespace Opc.Ua.Export
                             output.IsOptional = field.IsOptional;
                             output.AllowSubTypes = false;
                         }
-                        else if (sd.StructureType == (StructureType)3 || // StructureType.StructureWithSubtypedValues ||
-                                 sd.StructureType == (StructureType)4)   // StructureType.UnionWithSubtypedValues)
+                        else if (sd.StructureType == StructureType.StructureWithSubtypedValues ||
+                                 sd.StructureType == StructureType.UnionWithSubtypedValues)
                         {
                             output.IsOptional = false;
                             output.AllowSubTypes = field.IsOptional;
@@ -1030,11 +1024,11 @@ namespace Opc.Ua.Export
                                 {
                                     if (source.IsUnion)
                                     {
-                                        sd.StructureType = (StructureType)4; // StructureType.UnionWithSubtypedValues;
+                                        sd.StructureType = StructureType.UnionWithSubtypedValues;
                                     }
                                     else
                                     {
-                                        sd.StructureType = (StructureType)3; // StructureType.StructureWithSubtypedValues;
+                                        sd.StructureType = StructureType.StructureWithSubtypedValues;
                                     }
                                 }
                             }
@@ -1060,8 +1054,8 @@ namespace Opc.Ua.Export
                             {
                                 output.IsOptional = false;
                             }
-                            else if (sd.StructureType == (StructureType)3 || //StructureType.StructureWithSubtypedValues ||
-                                    sd.StructureType == (StructureType)4)   //StructureType.UnionWithSubtypedValues)
+                            else if (sd.StructureType == StructureType.StructureWithSubtypedValues ||
+                                    sd.StructureType == StructureType.UnionWithSubtypedValues)
                             {
                                 output.IsOptional = field.AllowSubTypes;
                             }

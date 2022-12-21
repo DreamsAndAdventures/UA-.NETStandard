@@ -29,6 +29,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
@@ -105,6 +106,7 @@ namespace Opc.Ua.Client
                 m_defaultItem = (MonitoredItem)template.m_defaultItem.MemberwiseClone();
                 m_handle = template.m_handle;
                 m_disableMonitoredItemCache = template.m_disableMonitoredItemCache;
+                m_transferId = template.m_transferId;
 
                 if (copyEventHandlers)
                 {
@@ -259,7 +261,9 @@ namespace Opc.Ua.Client
         }
 
         /// <summary>
-        /// The maximum number of notifications per publish request.
+        /// The life time of of the subscription in counts of
+        /// publish interval.
+        /// LifetimeCount shall be at least 3*KeepAliveCount.
         /// </summary>
         [DataMember(Order = 4)]
         public uint LifetimeCount
@@ -546,7 +550,7 @@ namespace Opc.Ua.Client
         /// <summary>
         /// The session that owns the subscription item.
         /// </summary>
-        public Session Session
+        public ISession Session
         {
             get => m_session;
             internal set => m_session = value;
@@ -811,21 +815,31 @@ namespace Opc.Ua.Client
         /// <param name="session">The session to which the subscription is transferred.</param>
         /// <param name="id">Id of the transferred subscription.</param>
         /// <param name="availableSequenceNumbers">The available sequence numbers on the server.</param>
-        public bool Transfer(Session session, uint id, UInt32Collection availableSequenceNumbers)
+        public bool Transfer(ISession session, uint id, UInt32Collection availableSequenceNumbers)
         {
             if (Created)
             {
+                // handle the case when the client has the subscription template and reconnects
                 if (id != m_id)
                 {
                     return false;
                 }
 
+                // remove the subscription from disconnected session
                 if (m_session?.RemoveTransferredSubscription(this) != true)
                 {
                     Utils.LogError("SubscriptionId {0}: Failed to remove transferred subscription from owner SessionId={1}.", Id, m_session?.SessionId);
                     return false;
                 }
 
+                // remove default subscription template which was copied in Session.Create()
+                var subscriptionsToRemove = session.Subscriptions.Where(s => !s.Created && s.TransferId == this.Id).ToList();
+                foreach (var subscription in subscriptionsToRemove)
+                {
+                    session.RemoveSubscription(subscription);
+                }
+
+                // add transferred subscription to session
                 if (!session.AddSubscription(this))
                 {
                     Utils.LogError("SubscriptionId {0}: Failed to add transferred subscription to SessionId={1}.", Id, session.SessionId);
@@ -834,6 +848,7 @@ namespace Opc.Ua.Client
             }
             else
             {
+                // handle the case when the client restarts and loads the saved subscriptions from storage
                 if (!GetMonitoredItems(out UInt32Collection serverHandles, out UInt32Collection clientHandles))
                 {
                     Utils.LogError("SubscriptionId {0}: The server failed to respond to GetMonitoredItems after transfer.", Id);
@@ -1800,6 +1815,12 @@ namespace Opc.Ua.Client
             // ensure the lifetime is sensible given the sampling interval.
             if (m_publishingInterval > 0)
             {
+                if (m_minLifetimeInterval > 0 && m_minLifetimeInterval < m_session.SessionTimeout)
+                {
+                    Utils.LogWarning("A smaller lifeTime {0}ms than session timeout {1}ms configured for subscription {2}.",
+                        m_minLifetimeInterval, m_session.SessionTimeout, Id);
+                }
+
                 uint minLifetimeCount = (uint)(m_minLifetimeInterval / m_publishingInterval);
 
                 if (lifetimeCount < minLifetimeCount)
@@ -1871,7 +1892,7 @@ namespace Opc.Ua.Client
             try
             {
                 Interlocked.Increment(ref m_outstandingMessageWorkers);
-                Session session = null;
+                ISession session = null;
                 uint subscriptionId = 0;
                 EventHandler callback = null;
 
@@ -2428,7 +2449,7 @@ namespace Opc.Ua.Client
         private MonitoredItem m_defaultItem;
         private SubscriptionChangeMask m_changeMask;
 
-        private Session m_session;
+        private ISession m_session;
         private object m_handle;
         private uint m_id;
         private uint m_transferId;
