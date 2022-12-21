@@ -257,7 +257,7 @@
     <MaxTrustListSize>0</MaxTrustListSize>
     <MultiCastDnsEnabled>false</MultiCastDnsEnabled>
     <OperationLimits>
-      <MaxNodesPerRead>1000</MaxNodesPerRead>
+      <MaxNodesPerRead>10000</MaxNodesPerRead>
       <MaxNodesPerWrite>1000</MaxNodesPerWrite>
       <MaxNodesPerBrowse>2500</MaxNodesPerBrowse>
       <MaxMonitoredItemsPerCall>500</MaxMonitoredItemsPerCall>
