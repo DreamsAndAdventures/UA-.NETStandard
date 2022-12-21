@@ -124,10 +124,10 @@ namespace DreamsAndAdventures.ReferenceServer
             ConditionState alarm = GetAlarm();
 
             // Set all ConditionType Parameters
-            branchEvent.ClientUserId.Value = String.Copy(alarm.ClientUserId.Value);
+            branchEvent.ClientUserId.Value = alarm.ClientUserId.Value.Replace(alarm.ClientUserId.Value, alarm.ClientUserId.Value);
             branchEvent.ConditionClassId.Value = new NodeId(alarm.ConditionClassId.Value);
             branchEvent.ConditionClassName.Value = new LocalizedText(alarm.ConditionClassName.Value);
-            branchEvent.ConditionName.Value = String.Copy(alarm.ConditionName.Value);
+            branchEvent.ConditionName.Value = alarm.ConditionName.Value.Replace(alarm.ConditionName.Value, alarm.ConditionName.Value);
             Debug.WriteLine("Branch conditionName = " + branchEvent.ConditionName.Value);
             branchEvent.BranchId.Value = branchId;
             // Message part of BaseAlarmState - adding here to deal with branch
