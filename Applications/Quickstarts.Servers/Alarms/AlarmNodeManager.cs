@@ -251,8 +251,6 @@ namespace Alarms
             }
         }
 
-
-
         /// <summary>
         /// Creates a new folder.
         /// </summary>
