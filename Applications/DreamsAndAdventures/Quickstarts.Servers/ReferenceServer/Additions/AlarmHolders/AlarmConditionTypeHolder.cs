@@ -100,6 +100,22 @@ namespace DreamsAndAdventures.ReferenceServer
                 alarm.LatchedState.Id.Value = false;
 
 
+                alarm.ActiveState.Name = new PropertyState<QualifiedName>(alarm.ActiveState);
+                alarm.ActiveState.Name.Create(SystemContext,
+                    new NodeId(AlarmName + ".ActiveState.Name", NamespaceIndex), 
+                    BrowseNames.Name,
+                    BrowseNames.Name,
+                    false);
+                alarm.ActiveState.Name.Value = new QualifiedName("False", NamespaceIndex);
+
+                alarm.ActiveState.Number = new PropertyState<uint>(alarm.ActiveState);
+                alarm.ActiveState.Number.Create(SystemContext,
+                    new NodeId(AlarmName + ".ActiveState.Number", NamespaceIndex),
+                    BrowseNames.Number,
+                    BrowseNames.Number,
+                    false);
+                alarm.ActiveState.Number.Value = 0;
+
             }
             else
             {
