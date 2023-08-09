@@ -129,6 +129,7 @@ namespace Quickstarts
                 m_server = new T();
                 if (nodeManagerFactories != null)
                 {
+                    // Archie Do Removals here.
                     foreach (var factory in nodeManagerFactories)
                     {
                         m_server.AddNodeManager(factory);
