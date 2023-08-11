@@ -132,7 +132,14 @@ namespace Quickstarts
                     // Archie Do Removals here.
                     foreach (var factory in nodeManagerFactories)
                     {
-                        m_server.AddNodeManager(factory);
+                        foreach( string uri in factory.NamespacesUris )
+                        {
+                            if ( uri.Contains("/UA/Pi/") )
+                            {
+                                m_server.AddNodeManager(factory);
+                                break;
+                            }
+                        }
                     }
                 }
             }

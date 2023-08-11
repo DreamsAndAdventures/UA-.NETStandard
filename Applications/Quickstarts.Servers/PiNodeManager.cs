@@ -290,6 +290,13 @@ namespace PiNameSpace
                         motionVariableNodeName, motionVariableName, DataTypeIds.Boolean, ValueRanks.Scalar,
                         AccessLevels.CurrentRead );
 
+                    string lastFileName = "LastFileCounter";
+                    string lastFileVariableNodeName = PiNodeName + "." + lastFileName;
+
+                    BaseDataVariableState lastVariable = CreateVariable(PiFolder,
+                        lastFileVariableNodeName, lastFileName, DataTypeIds.Int32, ValueRanks.Scalar);
+
+
                     // Initialize it, as it is read regularly
                     motionVariable.Value = false;
                     motionVariable.Timestamp = DateTime.UtcNow;
@@ -452,7 +459,7 @@ namespace PiNameSpace
                     {
                         m_fanValue = !m_fanValue;
                         m_fanCounter = 0;
-                        updateFan = true;
+                        //updateFan = true;
                     }
 
                     if ( updateFan )
@@ -514,24 +521,33 @@ namespace PiNameSpace
                             motionSensorVariableState.Timestamp = DateTime.UtcNow;
                             motionSensorVariableState.ClearChangeMasks(SystemContext, false);
 
-                            if ( m_isLinux && currentValue )
+                            if ( currentValue )
                             {
-                                string arguments = string.Format("-t {0} -o ./{1}/{2}_{3}.h264",
-                                    VideoTimeInMilliseconds, VideoDirectory,
-                                    VideoName, m_videoCounter.ToString().PadLeft(2, '0'));
-
-                                Process process = Process.Start(
-                                    new ProcessStartInfo( VideoExe, arguments ) );
-
-                                if ( process != null )
+                                if ( !m_inAlarm )
                                 {
-                                    process.WaitForExit();
-                                    m_videoCounter++;
+                                    m_inAlarm = true;
+
+                                    Utils.SilentDispose(m_thread);
+                                    m_thread = new Thread(this.AlarmOperation);
+                                    m_thread.Start();
                                 }
-                                else
-                                {
-                                    m_exception = "Unable to launch Exe for " + arguments;
-                                }
+
+                                //string arguments = string.Format("-t {0} -o ./{1}/{2}_{3}.h264",
+                                //    VideoTimeInMilliseconds, VideoDirectory,
+                                //    VideoName, m_videoCounter.ToString().PadLeft(2, '0'));
+
+                                //Process process = Process.Start(
+                                //    new ProcessStartInfo( VideoExe, arguments ) );
+
+                                //if ( process != null )
+                                //{
+                                //    process.WaitForExit();
+                                //    m_videoCounter++;
+                                //}
+                                //else
+                                //{
+                                //    m_exception = "Unable to launch Exe for " + arguments;
+                                //}
                             }
                         }
                     }
@@ -554,6 +570,16 @@ namespace PiNameSpace
                         exception.Value = m_exception;
                         exception.Timestamp = DateTime.UtcNow;
                         exception.ClearChangeMasks(SystemContext, false);
+                    }
+
+                    NodeState lastFileVariable = Find(
+                        new NodeId("Pi.LastFileCounter", NamespaceIndex));
+                    BaseDataVariableState lastFile = lastFileVariable as BaseDataVariableState;
+                    if (lastFile != null)
+                    {
+                        lastFile.Value = m_videoCounter;
+                        lastFile.Timestamp = DateTime.UtcNow;
+                        lastFile.ClearChangeMasks(SystemContext, false);
                     }
                 }
                 catch (Exception ex)
@@ -585,6 +611,50 @@ namespace PiNameSpace
 
         #endregion
 
+        #region Alarming
+
+        private void AlarmOperation()
+        {
+            string arguments = string.Format("-t {0} -o ./{1}/{2}_{3}.h264",
+                VideoTimeInMilliseconds, VideoDirectory,
+                VideoName, m_videoCounter.ToString().PadLeft(2, '0'));
+
+            if (m_isLinux)
+            {
+                Process process = Process.Start(
+                    new ProcessStartInfo(VideoExe, arguments));
+
+                if (process != null)
+                {
+                    // This is all botchy, but because it's a ten second video, it will work fine
+
+                    Thread.Sleep(2000);
+
+                    string soundArguments = string.Format("./PiSounds/Sound{0}.m4a", m_soundCounter);
+
+                    Process soundProcess = Process.Start(
+                        new ProcessStartInfo("vlc", soundArguments));
+
+                    if (soundProcess != null)
+                    {
+                        Thread.Sleep(6000);
+                        soundProcess.Kill();
+
+                        m_soundCounter++;
+                        if (m_soundCounter >= 4)
+                        {
+                            m_soundCounter = 1;
+                        }
+                    }
+                    process.WaitForExit();
+                }
+            }
+            m_videoCounter++;
+            m_inAlarm = false;
+        }
+
+        #endregion
+
 
         #region Private Fields
 
@@ -602,6 +672,10 @@ namespace PiNameSpace
         private string m_exception = "";
 
         private int m_videoCounter = 0;
+
+        private int m_soundCounter = 1;
+        private bool m_inAlarm = false;
+        private Thread m_thread = null;
 
         private GpioController m_controller = null;
 
