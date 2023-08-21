@@ -302,6 +302,30 @@ namespace PiNameSpace
                     motionVariable.Timestamp = DateTime.UtcNow;
                     motionVariable.ClearChangeMasks(SystemContext, false);
 
+                    string enableVariableName = "Enable";
+                    string enableVariableNodeName = PiNodeName + "." + enableVariableName;
+
+                    BaseDataVariableState enableVariable = CreateVariable(PiFolder,
+                        enableVariableNodeName, enableVariableName, DataTypeIds.Boolean, ValueRanks.Scalar,
+                        AccessLevels.CurrentReadOrWrite);
+                    enableVariable.OnWriteValue = OnWriteEnable;
+
+                    enableVariable.Value = true;
+                    enableVariable.Timestamp = DateTime.UtcNow;
+                    enableVariable.ClearChangeMasks(SystemContext, false);
+
+                    string enableSoundVariableName = "EnableSound";
+                    string enableSoundVariableNodeName = PiNodeName + "." + enableSoundVariableName;
+
+                    BaseDataVariableState enableSoundVariable = CreateVariable(PiFolder,
+                        enableSoundVariableNodeName, enableSoundVariableName, DataTypeIds.Boolean, ValueRanks.Scalar,
+                        AccessLevels.CurrentReadOrWrite);
+                    enableSoundVariable.OnWriteValue = OnWriteEnableSound;
+
+                    enableSoundVariable.Value = true;
+                    enableSoundVariable.Timestamp = DateTime.UtcNow;
+                    enableSoundVariable.ClearChangeMasks(SystemContext, false);
+
                     #endregion
 
 
@@ -531,23 +555,6 @@ namespace PiNameSpace
                                     m_thread = new Thread(this.AlarmOperation);
                                     m_thread.Start();
                                 }
-
-                                //string arguments = string.Format("-t {0} -o ./{1}/{2}_{3}.h264",
-                                //    VideoTimeInMilliseconds, VideoDirectory,
-                                //    VideoName, m_videoCounter.ToString().PadLeft(2, '0'));
-
-                                //Process process = Process.Start(
-                                //    new ProcessStartInfo( VideoExe, arguments ) );
-
-                                //if ( process != null )
-                                //{
-                                //    process.WaitForExit();
-                                //    m_videoCounter++;
-                                //}
-                                //else
-                                //{
-                                //    m_exception = "Unable to launch Exe for " + arguments;
-                                //}
                             }
                         }
                     }
@@ -611,6 +618,53 @@ namespace PiNameSpace
 
         #endregion
 
+
+        // OnWriteEnable
+        public ServiceResult OnWriteEnable(
+            ISystemContext context,
+            NodeState node,
+            NumericRange indexRange,
+            QualifiedName dataEncoding,
+            ref object value,
+            ref StatusCode statusCode,
+            ref DateTime timestamp)
+        {
+            Type writeValue = value.GetType();
+
+            if ( writeValue.Name == "Boolean" )
+            {
+                bool enable = (bool)value;
+                m_writeMutex.WaitOne();
+                m_enabled = enable;
+                m_writeMutex.ReleaseMutex();
+            }    
+
+            return StatusCodes.Good;
+        }
+
+        public ServiceResult OnWriteEnableSound(
+            ISystemContext context,
+            NodeState node,
+            NumericRange indexRange,
+            QualifiedName dataEncoding,
+            ref object value,
+            ref StatusCode statusCode,
+            ref DateTime timestamp)
+        {
+            Type writeValue = value.GetType();
+
+            if (writeValue.Name == "Boolean")
+            {
+                bool enable = (bool)value;
+                m_writeMutex.WaitOne();
+                m_enableSound  = enable;
+                m_writeMutex.ReleaseMutex();
+            }
+
+            return StatusCodes.Good;
+        }
+
+
         #region Alarming
 
         private void AlarmOperation()
@@ -619,34 +673,47 @@ namespace PiNameSpace
                 VideoTimeInMilliseconds, VideoDirectory,
                 VideoName, m_videoCounter.ToString().PadLeft(2, '0'));
 
+            bool enabled = false;
+            bool enableSound = false;
+            m_writeMutex.WaitOne();
+            enabled = m_enabled;
+            enableSound = m_enableSound;
+            m_writeMutex.ReleaseMutex();
+
             if (m_isLinux)
             {
-                Process process = Process.Start(
-                    new ProcessStartInfo(VideoExe, arguments));
-
-                if (process != null)
+                if (enabled)
                 {
-                    // This is all botchy, but because it's a ten second video, it will work fine
+                    Process process = Process.Start(
+                        new ProcessStartInfo(VideoExe, arguments));
 
-                    Thread.Sleep(2000);
-
-                    string soundArguments = string.Format("./PiSounds/Sound{0}.m4a", m_soundCounter);
-
-                    Process soundProcess = Process.Start(
-                        new ProcessStartInfo("vlc", soundArguments));
-
-                    if (soundProcess != null)
+                    if (process != null)
                     {
-                        Thread.Sleep(6000);
-                        soundProcess.Kill();
-
-                        m_soundCounter++;
-                        if (m_soundCounter >= 4)
+                        if (enableSound)
                         {
-                            m_soundCounter = 1;
+                            // This is all botchy, but because it's a ten second video, it will work fine
+
+                            Thread.Sleep(2000);
+
+                            string soundArguments = string.Format("./PiSounds/Sound{0}.m4a", m_soundCounter);
+
+                            Process soundProcess = Process.Start(
+                                new ProcessStartInfo("vlc", soundArguments));
+
+                            if (soundProcess != null)
+                            {
+                                Thread.Sleep(6000);
+                                soundProcess.Kill();
+
+                                m_soundCounter++;
+                                if (m_soundCounter >= 4)
+                                {
+                                    m_soundCounter = 1;
+                                }
+                            }
                         }
+                        process.WaitForExit();
                     }
-                    process.WaitForExit();
                 }
             }
             m_videoCounter++;
@@ -676,6 +743,10 @@ namespace PiNameSpace
         private int m_soundCounter = 1;
         private bool m_inAlarm = false;
         private Thread m_thread = null;
+
+        private Mutex m_writeMutex = new Mutex();
+        private bool m_enabled = true;
+        private bool m_enableSound = true;
 
         private GpioController m_controller = null;
 
