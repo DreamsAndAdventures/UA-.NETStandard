@@ -29,11 +29,28 @@
 
   <ItemGroup>
     <Compile Remove="Alarms\Alarms.cs" />
+    <Compile Remove="ArchieDataTypes.cs" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Stack\Opc.Ua.Core\Opc.Ua.Core.csproj" />
     <ProjectReference Include="..\..\Libraries\Opc.Ua.Server\Opc.Ua.Server.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="NodeSets\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="NodeSets\Opc.Ua.Di.NodeSet2.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="NodeSets\opc.ua.fx.ac.nodeset2.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="NodeSets\opc.ua.fx.data.nodeset2.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <PropertyGroup Condition="'$(SignAssembly)' == 'true'">
