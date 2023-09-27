@@ -22,6 +22,11 @@ namespace WorkOnImport
         /// The URI for the Alarms namespace (.NET code namespace is 'Alarms').
         /// </summary>
         public const string WorkOnImport = "http://dreamsandadventures.org/UA/WorkOnImport/";
+
+        public const string DI = "http://opcfoundation.org/UA/DI/";
+        public const string FxData = "http://opcfoundation.org/UA/FX/Data/";
+        public const string FxAc = "http://opcfoundation.org/UA/FX/AC/";
+
     }
     #endregion
 
@@ -41,9 +46,17 @@ namespace WorkOnImport
         {
             get
             {
-                var uri = Namespaces.WorkOnImport;
-                var instanceUri = uri + "Instance";
-                return new StringCollection { uri, instanceUri };
+                StringCollection strings = new StringCollection();
+                strings.Add(Namespaces.WorkOnImport);
+                strings.Add(Namespaces.WorkOnImport + "Instance");
+                strings.Add(Namespaces.DI);
+                strings.Add(Namespaces.DI + "Instance");
+                strings.Add(Namespaces.FxData);
+                strings.Add(Namespaces.FxData + "Instance");
+                strings.Add(Namespaces.FxAc);
+                strings.Add(Namespaces.FxAc + "Instance");
+
+                return strings;
             }
         }
 
@@ -126,18 +139,17 @@ namespace WorkOnImport
 
                 List<NodeStateCollection> nodeStates = new List<NodeStateCollection>();
 
-                NodeStateCollection aCollection = ImportXml(externalReferences, "./NodeSets/Opc.Ua.Di.NodeSet2.Xml");
-
                 #endregion
 
                 try
                 {
                     nodeStates.Add( ImportXml( externalReferences, "./NodeSets/Opc.Ua.Di.NodeSet2.Xml" ) );
-
+                    nodeStates.Add( ImportXml( externalReferences, "./NodeSets/Opc.Ua.fx.data.NodeSet2.Xml" ) );
+                    nodeStates.Add( ImportXml( externalReferences, "./NodeSets/Opc.Ua.fx.ac.NodeSet2.Xml" ) );
 
                     #region Initialize
-                        
-                    string FolderName = "WorkOnImport";
+
+        string FolderName = "WorkOnImport";
                     string FolderNodeName = FolderName;
 
                     #endregion
@@ -170,35 +182,7 @@ namespace WorkOnImport
 
                     #endregion
 
-
                     AddPredefinedNode(SystemContext, Folder);
-
-                    foreach(NodeStateCollection collection in nodeStates)
-                    {
-                        foreach(NodeState node in collection)
-                        {
-                            BaseObjectTypeState baseObjectTypeState = node as BaseObjectTypeState;
-                            if (baseObjectTypeState != null)
-                            {
-                                if (baseObjectTypeState.SuperTypeId != null)
-                                {
-                                    NodeState parent = FindNodeInAddressSpace(baseObjectTypeState.SuperTypeId);
-                                    if (parent != null)
-                                    {
-                                        parent.AddReference(ReferenceTypes.Organizes, false, baseObjectTypeState.NodeId);
-                                        baseObjectTypeState.AddReference(ReferenceTypes.HasSubtype, true, parent.NodeId);
-                                        //parent.AddReference(ReferenceTypes.HasSubtype, false, baseObjectTypeState.NodeId);
-                                        //baseObjectTypeState.AddReference(ReferenceTypes.HasSubtype, true, parent.NodeId);
-                                    }
-
-
-                                    // Now Find it
-                                }
-                            }
-
-                        }
-                    }
-
 
                     StartTimer();
                     m_allowEntry = true;
@@ -222,47 +206,52 @@ namespace WorkOnImport
                 Stream stream = new FileStream(resourcepath, FileMode.Open);
                 Opc.Ua.Export.UANodeSet nodeSet = Opc.Ua.Export.UANodeSet.Read(stream);
 
+                ServerSystemContext context = SystemContext;
+                NamespaceTable namespaceTable = SystemContext.NamespaceUris;
+                
+
                 foreach (string namespaceUri in nodeSet.NamespaceUris)
                 {
-                    SystemContext.NamespaceUris.GetIndexOrAppend(namespaceUri);
+                    ushort thisNamespaceIndex = SystemContext.NamespaceUris.GetIndexOrAppend(namespaceUri);
                 }
                 nodeSet.Import(SystemContext, predefinedNodes);
 
                 for (int ii = 0; ii < predefinedNodes.Count; ii++)
                 {
                     NodeState node = predefinedNodes[ii];
-                    AddPredefinedNode(SystemContext, node);
+                    string nodeIdString = node.NodeId.ToString();
 
-                    string nodeString = node.NodeId.ToString();
-                    if (nodeString.Contains("=15590") || nodeString.Contains("=15143"))
+                    Debug.WriteLine(ii.ToString() + " Importing " + node.BrowseName.Name + " [" + nodeIdString + "] " + node.GetType().FullName);
+
+                    try
                     {
-                        Debug.WriteLine("Here");
+                        AddPredefinedNode(SystemContext, node);
                     }
+                    catch (Exception exception)
+                    {
+                        string superType = exception.Message;
+                        BaseObjectTypeState baseObjectTypeState = node as BaseObjectTypeState;
+                        ReferenceTypeState refState = node as ReferenceTypeState;
 
-                    //BaseObjectTypeState baseObjectTypeState = node as BaseObjectTypeState;
-                    //if ( baseObjectTypeState != null)
-                    //{
-                    //    if ( baseObjectTypeState.SuperTypeId != null )
-                    //    {
-                    //        NodeState parent = FindNodeInAddressSpace(baseObjectTypeState.SuperTypeId);
-                    //        if ( parent != null )
-                    //        {
-                    //            parent.AddReference(ReferenceTypes.HasSubtype, false, baseObjectTypeState.NodeId);
-                    //            baseObjectTypeState.AddReference(ReferenceTypes.HasSubtype, true, parent.NodeId);
-                    //        }
+                        if (baseObjectTypeState != null)
+                        {
+                            superType = "SuperType " + baseObjectTypeState.SuperTypeId.ToString();
+                        }
+                        else if (refState != null)
+                        {
+                            superType = "Reference SuperType " + refState.SuperTypeId.ToString();
+                        }
 
-                    //        // Now Find it
-                    //    }
-                    //}
-
-                    Debug.WriteLine("Importing " + node.BrowseName.Name + " [" + node.NodeId.ToString() + "] " + node.GetType().FullName );
+                        Debug.WriteLine("Unable to add item " +
+                            node.BrowseName.Name + "[" + nodeIdString + "] " + superType );
+                    }
                 }
                 // ensure the reverse refernces exist.
                 AddReverseReferences(externalReferences);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
+                Debug.WriteLine( ex.Message );
                 throw;
             }
 
