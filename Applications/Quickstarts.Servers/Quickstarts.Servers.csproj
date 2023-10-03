@@ -29,7 +29,6 @@
 
   <ItemGroup>
     <Compile Remove="Alarms\Alarms.cs" />
-    <Compile Remove="ArchieDataTypes.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -38,10 +37,20 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="PiModel\" />
     <Folder Include="NodeSets\" />
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Generated\Schema\UAModel.DI.NodeSet2.xml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Generated\Schema\UAModel.FXAC.NodeSet2.xml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Generated\Schema\UAModel.FXData.NodeSet2.xml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="NodeSets\Opc.Ua.Di.NodeSet2.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -50,6 +59,9 @@
     </None>
     <None Update="NodeSets\opc.ua.fx.data.nodeset2.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PiModel\PiModel2.xml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 

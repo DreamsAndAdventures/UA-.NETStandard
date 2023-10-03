@@ -1,0 +1,109 @@
+<opc:TypeDictionary
+  xmlns:UAModel.DI="http://opcfoundation.org/UA/DI/"
+  xmlns:UAModel.FXData="http://opcfoundation.org/UA/FX/Data/"
+  xmlns:opc="http://opcfoundation.org/BinarySchema/"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:ua="http://opcfoundation.org/UA/"
+  xmlns:tns="http://opcfoundation.org/UA/FX/AC/"
+  DefaultByteOrder="LittleEndian"
+  TargetNamespace="http://opcfoundation.org/UA/FX/AC/"
+>
+  <opc:Import Namespace="http://opcfoundation.org/UA/" Location="Opc.Ua.BinarySchema.bsd"/>
+  <opc:Import Namespace="http://opcfoundation.org/UA/DI/" Location="UAModel.DI.BinarySchema.bsd"/>
+  <opc:Import Namespace="http://opcfoundation.org/UA/FX/Data/" Location="UAModel.FXData.BinarySchema.bsd"/>
+
+  <opc:EnumeratedType Name="ClampKindEnum" LengthInBits="32">
+    <opc:EnumeratedValue Name="Screw" Value="0" />
+    <opc:EnumeratedValue Name="Thumb" Value="1" />
+  </opc:EnumeratedType>
+
+  <opc:EnumeratedType Name="ConnectionEndpointStatusEnum" LengthInBits="32">
+    <opc:Documentation>This enumeration defines the values of the FlcConnectionStatus of an FlcConnectionEndpointType. </opc:Documentation>
+    <opc:EnumeratedValue Name="Initial" Value="0" />
+    <opc:EnumeratedValue Name="Ready" Value="1" />
+    <opc:EnumeratedValue Name="PreOperational" Value="2" />
+    <opc:EnumeratedValue Name="Operational" Value="3" />
+    <opc:EnumeratedValue Name="Error" Value="4" />
+  </opc:EnumeratedType>
+
+  <opc:EnumeratedType Name="FxTimeUnitsEnum" LengthInBits="32">
+    <opc:Documentation>This enumeration describes the support units of time</opc:Documentation>
+    <opc:EnumeratedValue Name="Nanosecond" Value="0" />
+    <opc:EnumeratedValue Name="Microsecond" Value="1" />
+    <opc:EnumeratedValue Name="Millisecond" Value="2" />
+    <opc:EnumeratedValue Name="Second" Value="3" />
+  </opc:EnumeratedType>
+
+  <opc:EnumeratedType Name="SocketKindEnum" LengthInBits="32">
+    <opc:EnumeratedValue Name="RJ45" Value="0" />
+    <opc:EnumeratedValue Name="M12" Value="1" />
+  </opc:EnumeratedType>
+
+  <opc:EnumeratedType Name="CommHealthOptionSet" LengthInBits="16" IsOptionSet="true">
+    <opc:EnumeratedValue Name="None" Value="0" />
+    <opc:EnumeratedValue Name="CommInitial" Value="1" />
+    <opc:EnumeratedValue Name="CommPreOperational" Value="2" />
+    <opc:EnumeratedValue Name="CommError" Value="4" />
+  </opc:EnumeratedType>
+
+  <opc:EnumeratedType Name="DeviceHealthOptionSet" LengthInBits="16" IsOptionSet="true">
+    <opc:EnumeratedValue Name="None" Value="0" />
+    <opc:EnumeratedValue Name="DeviceFailure" Value="1" />
+    <opc:EnumeratedValue Name="DeviceCheckFunction" Value="2" />
+    <opc:EnumeratedValue Name="DeviceMaintenanceRequired" Value="4" />
+    <opc:EnumeratedValue Name="DeviceOffSpec" Value="8" />
+  </opc:EnumeratedType>
+
+  <opc:EnumeratedType Name="OperationalHealthOptionSet" LengthInBits="32" IsOptionSet="true">
+    <opc:EnumeratedValue Name="None" Value="0" />
+    <opc:EnumeratedValue Name="OperationalWarning" Value="65536" />
+    <opc:EnumeratedValue Name="OperationalError" Value="131072" />
+    <opc:EnumeratedValue Name="SubOperationalWarning" Value="262144" />
+    <opc:EnumeratedValue Name="SubOperationalError" Value="524288" />
+  </opc:EnumeratedType>
+
+  <opc:StructuredType Name="AggregatedHealthDataType" BaseType="ua:ExtensionObject">
+    <opc:Field Name="AggregatedDeviceHealth" TypeName="tns:DeviceHealthOptionSet" />
+    <opc:Field Name="AggregatedOperationalHealth" TypeName="tns:OperationalHealthOptionSet" />
+  </opc:StructuredType>
+
+  <opc:StructuredType Name="ApplicationIdentifierDataType" BaseType="ua:ExtensionObject">
+    <opc:Field Name="Name" TypeName="ua:LocalizedText" />
+    <opc:Field Name="UniqueIdentifier" TypeName="tns:ApplicationId" />
+  </opc:StructuredType>
+
+  <opc:StructuredType Name="FxVersion" BaseType="ua:ExtensionObject">
+    <opc:Field Name="Major" TypeName="opc:UInt16" />
+    <opc:Field Name="Minor" TypeName="opc:UInt16" />
+    <opc:Field Name="Build" TypeName="opc:UInt16" />
+    <opc:Field Name="SubBuild" TypeName="opc:UInt16" />
+  </opc:StructuredType>
+
+  <opc:StructuredType Name="IntervalRange" BaseType="ua:ExtensionObject">
+    <opc:Field Name="Min" TypeName="opc:UInt32" />
+    <opc:Field Name="Max" TypeName="opc:UInt32" />
+    <opc:Field Name="Increment" TypeName="opc:UInt16" />
+    <opc:Field Name="Multiplier" TypeName="opc:UInt16" />
+    <opc:Field Name="Unit" TypeName="tns:FxTimeUnitsEnum" />
+  </opc:StructuredType>
+
+  <opc:StructuredType Name="PublisherQosDataType" BaseType="ua:ExtensionObject">
+    <opc:Field Name="QosCategory" TypeName="opc:String" />
+    <opc:Field Name="NoOfDatagramQos" TypeName="opc:Int32" />
+    <opc:Field Name="DatagramQos" TypeName="ua:ExtensionObject" LengthField="NoOfDatagramQos" />
+  </opc:StructuredType>
+
+  <opc:StructuredType Name="SubscriberQosDataType" BaseType="ua:ExtensionObject">
+    <opc:Field Name="QosCategory" TypeName="opc:String" />
+    <opc:Field Name="NoOfDatagramQos" TypeName="opc:Int32" />
+    <opc:Field Name="DatagramQos" TypeName="ua:ExtensionObject" LengthField="NoOfDatagramQos" />
+  </opc:StructuredType>
+
+  <opc:StructuredType Name="ApplicationId" BaseType="ua:Union">
+    <opc:Field Name="IdNumeric" TypeName="opc:UInt32" />
+    <opc:Field Name="IdString" TypeName="opc:String" />
+    <opc:Field Name="IdGuid" TypeName="opc:Guid" />
+    <opc:Field Name="IdByteString" TypeName="opc:ByteString" />
+  </opc:StructuredType>
+
+</opc:TypeDictionary>
