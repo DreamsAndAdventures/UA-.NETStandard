@@ -131,6 +131,8 @@ namespace WorkOnImport
         /// </remarks>
         public override void CreateAddressSpace(IDictionary<NodeId, IList<IReference>> externalReferences)
         {
+            Console.Out.WriteLine("WorkOnImport Started");
+
             lock (Lock)
             {
                 #region Setup
@@ -151,11 +153,11 @@ namespace WorkOnImport
                     //nodeStates.Add( ImportXml( externalReferences, "./NodeSets/Opc.Ua.Di.NodeSet2.Xml" ) );
                     //nodeStates.Add( ImportXml( externalReferences, "./NodeSets/Opc.Ua.fx.data.NodeSet2.Xml" ) );
                     //nodeStates.Add( ImportXml( externalReferences, "./NodeSets/Opc.Ua.fx.ac.NodeSet2.Xml" ) );
-                    nodeStates.Add(ImportXml(externalReferences, "./Generated/Schema/UAModel.Di.NodeSet2.Xml"));
-                    nodeStates.Add(ImportXml(externalReferences, "./Generated/Schema/UAModel.FXData.NodeSet2.Xml"));
-                    nodeStates.Add(ImportXml(externalReferences, "./Generated/Schema/UAModel.FXAC.NodeSet2.Xml"));
+                    nodeStates.Add(ImportXml(externalReferences, "./Generated/Schema/UAModel.DI.NodeSet2.xml"));
+                    nodeStates.Add(ImportXml(externalReferences, "./Generated/Schema/UAModel.FXData.NodeSet2.xml"));
+                    nodeStates.Add(ImportXml(externalReferences, "./Generated/Schema/UAModel.FXAC.NodeSet2.xml"));
 
-                    nodeStates.Add(ImportXml(externalReferences, "./PiModel/PiModel2.Xml"));
+                    nodeStates.Add(ImportXml(externalReferences, "./PiModel/PiModel2.xml"));
 
                     #region Initialize
 
@@ -359,10 +361,14 @@ namespace WorkOnImport
 
                     StartTimer();
                     m_allowEntry = true;
+                    Console.Out.WriteLine("WorkOnImport Successful");
+
 
                 }
                 catch (Exception e)
                 {
+                    Console.Out.WriteLine("WorkOnImport Failed " + e.Message );
+
                     Utils.LogError(e, "Error creating the AlarmNodeManager address space.");
                 }
 
