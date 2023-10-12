@@ -321,6 +321,10 @@ namespace FullAlarms
             }
         }
 
+        public void AddPredefinedNode(NodeState nodeState)
+        {
+            AddPredefinedNode(SystemContext, nodeState);
+        }
 
 
         /// <summary>

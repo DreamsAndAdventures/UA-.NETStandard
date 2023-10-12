@@ -131,7 +131,10 @@ namespace Quickstarts
                 {
                     foreach (var factory in nodeManagerFactories)
                     {
-                        m_server.AddNodeManager(factory);
+                        if (factory.NamespacesUris[0].Contains("/FullAlarms/"))
+                        {
+                            m_server.AddNodeManager(factory);
+                        }
                     }
                 }
             }

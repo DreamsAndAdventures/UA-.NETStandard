@@ -68,5 +68,11 @@ namespace FullAlarms
         public const string TRIGGER_EXTENSION = ".Trigger";
         public const string ALARM_EXTENSION = ".Alarm";
         public const string DISCREPANCY_TARGET_NAME = "TargetValueNodeId";
+
+        public const string DERIVED_NAME = "Derived";
+        public const int DERIVED_TYPE_OFFSET = 500000; // Goofy, but should work to make it easier to create new alarm types
+
+
+
     }
 }

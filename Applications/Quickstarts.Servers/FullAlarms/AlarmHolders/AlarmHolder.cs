@@ -345,6 +345,13 @@ namespace FullAlarms
         {
             string alarmTypeName = "";
 
+            bool isDerived = false;
+            if ( alarmTypeIdentifier > AlarmDefines.DERIVED_TYPE_OFFSET )
+            {
+                alarmTypeIdentifier -= AlarmDefines.DERIVED_TYPE_OFFSET;
+                isDerived = true;
+            }
+
             switch (alarmTypeIdentifier)
             {
                 case Opc.Ua.ObjectTypes.ConditionType:
@@ -446,8 +453,12 @@ namespace FullAlarms
                 default:
                     break;
             }
-
-            return alarmTypeName;
+            string finalName = alarmTypeName;
+            if ( isDerived )
+            {
+                finalName = AlarmDefines.DERIVED_NAME + finalName;
+            }
+            return finalName;
         }
 
         /// <summary>

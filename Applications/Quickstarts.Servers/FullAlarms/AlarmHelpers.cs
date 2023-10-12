@@ -169,5 +169,79 @@ namespace FullAlarms
                         new Argument() { Name = "UInt32 value", Description = "Runtime of Alarms in seconds.",  DataType = DataTypeIds.UInt32, ValueRank = ValueRanks.Scalar }
             };
         }
+
+
+        /// <summary>
+        /// Create a mechanism to create a Type
+        /// </summary>
+        public static BaseObjectTypeState CreateType(AlarmNodeManager nodeManager, NodeId parentTypeNodeId, string name)
+        {
+            BaseObjectTypeState type = null;
+
+            if (parentTypeNodeId.IdType == IdType.Numeric)
+            {
+                UInt32 parentId = (UInt32)parentTypeNodeId.Identifier;
+                UInt32 derivedId = AlarmDefines.DERIVED_TYPE_OFFSET + parentId;
+                NodeId derivedNodeId = new NodeId(derivedId, nodeManager.NamespaceIndex);
+
+                type = new BaseObjectTypeState();
+
+                type.SymbolicName = AlarmDefines.DERIVED_NAME + name;
+                type.SuperTypeId = parentTypeNodeId;
+                type.NodeId = new NodeId(derivedId, nodeManager.NamespaceIndex);
+                type.BrowseName = new QualifiedName(AlarmDefines.DERIVED_NAME + name, nodeManager.NamespaceIndex);
+                type.DisplayName = type.BrowseName.Name;
+                type.WriteMask = AttributeWriteMask.None;
+                type.UserWriteMask = AttributeWriteMask.None;
+                type.IsAbstract = false;
+
+                nodeManager.AddPredefinedNode(type);
+            }
+
+            return type;
+        }
+        /// <summary>
+        /// Get type definitionId for derived types
+        /// Poorly named as an overwrite for derived types
+        /// </summary>
+
+        public static NodeId GetDefaultTypeDefinitionId(NamespaceTable namespaceUris, NodeId parentTypeNodeId, string parentTypeName)
+        {
+            if (parentTypeNodeId.IdType == IdType.Numeric)
+            {
+                UInt32 parentId = (UInt32)parentTypeNodeId.Identifier;
+                UInt32 derivedId = AlarmDefines.DERIVED_TYPE_OFFSET + parentId;
+
+                return Opc.Ua.NodeId.Create(
+                    derivedId,
+                    Namespaces.Alarms,
+                    namespaceUris);
+            }
+            return Opc.Ua.NodeId.Create(0, "", namespaceUris);
+        }
+
+        /// <summary>
+        /// Get Derived Identifier
+        /// </summary>
+        public static UInt32 GetDerivedIdentifier(NodeId parent)
+        {
+            UInt32 id = 0;
+
+            if (parent.IdType == IdType.Numeric)
+            {
+                id = GetDerivedIdentifier((UInt32)parent.Identifier);
+            }
+
+            return id;
+        }
+
+
+        /// <summary>
+        /// Get Derived Identifier
+        /// </summary>
+        public static UInt32 GetDerivedIdentifier(UInt32 parentIdentifier)
+        {
+            return parentIdentifier + AlarmDefines.DERIVED_TYPE_OFFSET;
+        }
     }
 }
