@@ -124,6 +124,16 @@ namespace FullAlarms
         {
             lock (Lock)
             {
+                #region Types
+
+                NodeState derivedConditionType = DerivedConditionType.CreateType(this);
+                NodeState derivedAcknowledgeableConditionType = DerivedAcknowledgeableConditionType.CreateType(this);
+                NodeState derivedSystemOffNormalAlarmType = DerivedSystemOffNormalAlarmType.CreateType(this);
+                NodeState derivedExclusiveLevelAlarmType = DerivedExclusiveLevelAlarmType.CreateType(this);
+                NodeState derivedNonExclusiveLevelAlarmType = DerivedNonExclusiveLevelAlarmType.CreateType(this);
+
+                #endregion
+
                 #region Setup
 
                 IList<IReference> references = null;
@@ -145,6 +155,9 @@ namespace FullAlarms
                     Type alarmControllerType = Type.GetType("FullAlarms.AlarmController");
                     int interval = 1000;
                     string intervalString = interval.ToString();
+                    int alternateMultiplier = 3;
+                    int alternateInterval = interval * alternateMultiplier;
+                    string alternateIntervalString = alternateInterval.ToString();
 
                     int conditionTypeIndex = 0;
                     #endregion
@@ -174,6 +187,7 @@ namespace FullAlarms
                     string endMethodNodeName = alarmsNodeName + "." + endMethodName;
                     MethodState endMethod = AlarmHelpers.CreateMethod(alarmsFolder, NamespaceIndex, endMethodNodeName, endMethodName);
                     endMethod.OnCallMethod = new GenericMethodCalledEventHandler(OnEnd);
+
                     #endregion
 
                     #region Create Variables
@@ -187,6 +201,16 @@ namespace FullAlarms
                     AlarmController analogAlarmController = (AlarmController)something;
                     SourceController analogSourceController = new SourceController(analogTrigger, analogAlarmController);
                     m_triggerMap.Add("Analog", analogSourceController);
+
+                    string alternateTriggerName = "AlternateSource";
+                    string alternateTriggerNodeName = alarmsNodeName + "." + alternateTriggerName;
+                    BaseDataVariableState alternateTrigger = AlarmHelpers.CreateVariable(alarmsFolder,
+                        NamespaceIndex, alternateTriggerNodeName, alternateTriggerName);
+                    alternateTrigger.OnWriteValue = OnWriteAlarmTrigger;
+                    var somethingElse = Activator.CreateInstance(alarmControllerType, alternateTrigger, alternateInterval, false);
+                    AlarmController alternateAlarmController = (AlarmController)somethingElse;
+                    SourceController alternateSourceController = new SourceController(alternateTrigger, alternateAlarmController);
+                    m_triggerMap.Add("Alternate", alternateSourceController);
 
                     string booleanTriggerName = "BooleanSource";
                     string booleanTriggerNodeName = alarmsNodeName + "." + booleanTriggerName;
@@ -217,7 +241,69 @@ namespace FullAlarms
                         #endregion
 
                         string name = intervalString;// + "." + subFoldersName;
+                        string alternateName = alternateIntervalString;
+
                         bool optional = folder.Equals("Optional", StringComparison.OrdinalIgnoreCase);
+
+                        AlarmHolder derivedCondition = new DerivedConditionTypeHolder(
+                            this,
+                            subFolder,
+                            analogSourceController,
+                            name,
+                            GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                            alarmControllerType,
+                            interval,
+                            optional: optional);
+
+                        AddAlarmHolder(folder, derivedCondition, ref nullNodeId);
+
+                        AlarmHolder derivedAcknowledgeableCondition = new DerivedAcknowledgeableConditionTypeHolder(
+                            this,
+                            subFolder,
+                            analogSourceController,
+                            name,
+                            GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                            alarmControllerType,
+                            interval,
+                            optional: optional);
+
+                        AddAlarmHolder(folder, derivedAcknowledgeableCondition, ref nullNodeId);
+
+                        AlarmHolder derivedExclusiveLevel = new DerivedExclusiveLevelHolder(
+                            this,
+                            subFolder,
+                            analogSourceController,
+                            name,
+                            GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                            alarmControllerType,
+                            interval,
+                            optional: optional);
+
+                        AddAlarmHolder(folder, derivedExclusiveLevel, ref nullNodeId);
+
+                        AlarmHolder derivedNonExclusiveLevel = new DerivedNonExclusiveLevelHolder(
+                            this,
+                            subFolder,
+                            analogSourceController,
+                            name,
+                            GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                            alarmControllerType,
+                            interval,
+                            optional: optional);
+
+                        AddAlarmHolder(folder, derivedNonExclusiveLevel, ref nullNodeId);
+
+                        AlarmHolder derivedSystemOffNormal = new DerivedSystemOffNormalAlarmTypeHolder(
+                            this,
+                            subFolder,
+                            booleanSourceController,
+                            name,
+                            GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                            alarmControllerType,
+                            interval,
+                            optional: optional);
+
+                        AddAlarmHolder(folder, derivedSystemOffNormal, ref nullNodeId);
 
                         AlarmHolder exclusiveLevel = new ExclusiveLevelHolder(
                             this,
@@ -230,6 +316,18 @@ namespace FullAlarms
                             optional: optional);
 
                         AddAlarmHolder(folder, exclusiveLevel, ref nullNodeId);
+
+                        AlarmHolder alternateExclusiveLevel = new ExclusiveLevelHolder(
+                            this,
+                            subFolder,
+                            alternateSourceController,
+                            alternateName,
+                            GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                            alarmControllerType,
+                            alternateInterval,
+                            optional: optional);
+
+                        AddAlarmHolder(folder, alternateExclusiveLevel, ref nullNodeId);
 
                         AlarmHolder exclusiveLimit = new ExclusiveLimitHolder(
                             this,
