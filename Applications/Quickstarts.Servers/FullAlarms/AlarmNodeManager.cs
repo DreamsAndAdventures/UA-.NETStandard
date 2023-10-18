@@ -128,6 +128,7 @@ namespace FullAlarms
 
                 NodeState derivedConditionType = DerivedConditionType.CreateType(this);
                 NodeState derivedAcknowledgeableConditionType = DerivedAcknowledgeableConditionType.CreateType(this);
+                NodeState derivedOffNormalAlarmType = DerivedOffNormalAlarmType.CreateType(this);
                 NodeState derivedSystemOffNormalAlarmType = DerivedSystemOffNormalAlarmType.CreateType(this);
                 NodeState derivedExclusiveLevelAlarmType = DerivedExclusiveLevelAlarmType.CreateType(this);
                 NodeState derivedNonExclusiveLevelAlarmType = DerivedNonExclusiveLevelAlarmType.CreateType(this);
@@ -304,6 +305,18 @@ namespace FullAlarms
                             optional: optional);
 
                         AddAlarmHolder(folder, derivedSystemOffNormal, ref nullNodeId);
+
+                        AlarmHolder derivedOffNormal = new DerivedOffNormalAlarmTypeHolder(
+                            this,
+                            subFolder,
+                            booleanSourceController,
+                            name,
+                            GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                            alarmControllerType,
+                            interval,
+                            optional: optional);
+
+                        AddAlarmHolder(folder, derivedOffNormal, ref nullNodeId);
 
                         AlarmHolder exclusiveLevel = new ExclusiveLevelHolder(
                             this,
