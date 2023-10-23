@@ -348,6 +348,12 @@ namespace Opc.Ua.Client.Tests
             var session = await ClientFixture.ConnectAsync(ServerUrl, SecurityPolicies.Basic256Sha256, Endpoints).ConfigureAwait(false);
             Assert.NotNull(session);
 
+            int sessionConfigChanged = 0;
+            session.SessionConfigurationChanged += (object sender, EventArgs e) => { sessionConfigChanged++; };
+
+            int sessionClosing = 0;
+            session.SessionClosing += (object sender, EventArgs e) => { sessionClosing++; };
+
             ManualResetEvent quitEvent = new ManualResetEvent(false);
             var reconnectHandler = new SessionReconnectHandler(reconnectAbort, useMaxReconnectPeriod ? MaxTimeout : -1);
             reconnectHandler.BeginReconnect(session, connectTimeout / 5,
@@ -391,10 +397,15 @@ namespace Opc.Ua.Client.Tests
                 Assert.AreEqual(session, reconnectHandler.Session);
             }
 
+            Assert.AreEqual(reconnectAbort ? 0 : 1, sessionConfigChanged);
+            Assert.AreEqual(0, sessionClosing);
+
             var result = session.Close();
             Assert.NotNull(result);
             reconnectHandler.Dispose();
             session.Dispose();
+
+            Assert.Less(0, sessionClosing);
         }
 
         [Theory, Order(220)]
@@ -632,7 +643,7 @@ namespace Opc.Ua.Client.Tests
             // hook callback to renew the user identity
             session2.RenewUserIdentity += (session, identity) => {
                 return userIdentity;
-                };
+            };
 
             // activate the session from saved sesson secrets on the new channel
             session2.Reconnect(channel2);
@@ -1153,7 +1164,7 @@ namespace Opc.Ua.Client.Tests
 
         [Test, Order(710)]
         [TestCaseSource(nameof(TypeSystems))]
-        public async Task LoadAllServerDataTypeSystems(NodeId dataTypeSystem)
+        public void LoadAllServerDataTypeSystems(NodeId dataTypeSystem)
         {
             // find the dictionary for the description.
             Browser browser = new Browser(Session) {
@@ -1174,7 +1185,7 @@ namespace Opc.Ua.Client.Tests
                 NodeId dictionaryId = ExpandedNodeId.ToNodeId(r.NodeId, Session.NamespaceUris);
                 TestContext.Out.WriteLine("  ReadDictionary {0} {1}", r.BrowseName.Name, dictionaryId);
                 var dictionaryToLoad = new DataDictionary(Session);
-                await dictionaryToLoad.Load(dictionaryId, r.BrowseName.Name).ConfigureAwait(false);
+                dictionaryToLoad.Load(dictionaryId, r.BrowseName.Name);
 
                 // internal API for testing only
                 var dictionary = dictionaryToLoad.ReadDictionary(dictionaryId);
@@ -1184,7 +1195,7 @@ namespace Opc.Ua.Client.Tests
                 {
                     try
                     {
-                        await dictionaryToLoad.Validate(dictionary, true).ConfigureAwait(false);
+                        dictionaryToLoad.Validate(dictionary, true);
                     }
                     catch (Exception ex)
                     {
@@ -1193,7 +1204,7 @@ namespace Opc.Ua.Client.Tests
                 }
                 else
                 {
-                    await dictionaryToLoad.Validate(dictionary, true).ConfigureAwait(false);
+                    dictionaryToLoad.Validate(dictionary, true);
                 }
             }
         }

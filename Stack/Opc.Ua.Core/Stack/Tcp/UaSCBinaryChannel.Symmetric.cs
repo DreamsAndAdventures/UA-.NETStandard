@@ -285,7 +285,7 @@ namespace Opc.Ua.Bindings
                     // int maxMessageSize = Quotas.MessageContext.MaxMessageSize;
                     // Quotas.MessageContext.MaxMessageSize = Int32.MaxValue;
 
-                    BinaryEncoder.EncodeMessage(encodeable, ostrm, Quotas.MessageContext);
+                    BinaryEncoder.EncodeMessage(encodeable, ostrm, Quotas.MessageContext, true);
 
                     // Quotas.MessageContext.MaxMessageSize = maxMessageSize;
                 }
@@ -295,15 +295,9 @@ namespace Opc.Ua.Bindings
 
                 if (rawBytes != null)
                 {
-                    BinaryEncoder encoder = new BinaryEncoder(ostrm, Quotas.MessageContext);
-                    try
+                    using (BinaryEncoder encoder = new BinaryEncoder(ostrm, Quotas.MessageContext, true))
                     {
                         encoder.WriteRawBytes(rawBytes.Value.Array, rawBytes.Value.Offset, rawBytes.Value.Count);
-                    }
-                    finally
-                    {
-                        encoder.Close();
-                        encoder.Dispose();
                     }
                 }
 
@@ -332,7 +326,7 @@ namespace Opc.Ua.Bindings
                     }
 
                     MemoryStream strm = new MemoryStream(chunkToProcess.Array, 0, SendBufferSize);
-                    BinaryEncoder encoder = new BinaryEncoder(strm, Quotas.MessageContext);
+                    BinaryEncoder encoder = new BinaryEncoder(strm, Quotas.MessageContext, false);
 
                     try
                     {
@@ -742,7 +736,7 @@ namespace Opc.Ua.Bindings
             {
                 if (computedSignature[ii] != signature[ii])
                 {
-                    string messageType = new UTF8Encoding().GetString(dataToVerify.Array, dataToVerify.Offset, 4);
+                    string messageType = Encoding.UTF8.GetString(dataToVerify.Array, dataToVerify.Offset, 4);
                     int messageLength = BitConverter.ToInt32(dataToVerify.Array, dataToVerify.Offset + 4);
                     string expectedSignature = Utils.ToHexString(computedSignature);
                     string actualSignature = Utils.ToHexString(signature);

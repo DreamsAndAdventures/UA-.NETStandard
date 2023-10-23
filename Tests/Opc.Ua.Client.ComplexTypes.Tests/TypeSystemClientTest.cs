@@ -105,6 +105,9 @@ namespace Opc.Ua.Client.ComplexTypes.Tests
             m_server = await m_serverFixture.StartAsync(writer ?? TestContext.Out, m_pkiRoot).ConfigureAwait(false);
 
             m_clientFixture = new ClientFixture();
+            m_clientFixture.UseTracing = true;
+            m_clientFixture.StartActivityListener();
+
             await m_clientFixture.LoadClientConfiguration(m_pkiRoot).ConfigureAwait(false);
             m_clientFixture.Config.TransportQuotas.MaxMessageSize = 4 * 1024 * 1024;
             m_url = new Uri(m_uriScheme + "://localhost:" + m_serverFixture.Port.ToString());
@@ -131,6 +134,7 @@ namespace Opc.Ua.Client.ComplexTypes.Tests
                 m_session = null;
             }
             await m_serverFixture.StopAsync().ConfigureAwait(false);
+            Utils.SilentDispose(m_clientFixture);
         }
 
         /// <summary>
@@ -188,14 +192,14 @@ namespace Opc.Ua.Client.ComplexTypes.Tests
         }
 
         [Test, Order(200)]
-        public async Task BrowseComplexTypesServer()
+        public async Task BrowseComplexTypesServerAsync()
         {
             var samples = new ClientSamples(TestContext.Out, null, null, true);
 
-            await samples.LoadTypeSystem(Session).ConfigureAwait(false);
+            await samples.LoadTypeSystemAsync(Session).ConfigureAwait(false);
 
             ReferenceDescriptionCollection referenceDescriptions =
-                samples.BrowseFullAddressSpace(this, Objects.RootFolder);
+                await samples.BrowseFullAddressSpaceAsync(this, Objects.RootFolder).ConfigureAwait(false);
 
             TestContext.Out.WriteLine("References: {0}", referenceDescriptions.Count);
 
@@ -214,15 +218,15 @@ namespace Opc.Ua.Client.ComplexTypes.Tests
         }
 
         [Test, Order(300)]
-        public async Task FetchComplexTypesServer()
+        public async Task FetchComplexTypesServerAsync()
         {
             var samples = new ClientSamples(TestContext.Out, null, null, true);
 
-            await samples.LoadTypeSystem(m_session).ConfigureAwait(false);
+            await samples.LoadTypeSystemAsync(m_session).ConfigureAwait(false);
 
             IList<INode> allNodes = null;
-            allNodes = samples.FetchAllNodesNodeCache(
-                this, Objects.RootFolder, true, true, false);
+            allNodes = await samples.FetchAllNodesNodeCacheAsync(
+                this, Objects.RootFolder, true, true, false).ConfigureAwait(false);
 
             TestContext.Out.WriteLine("References: {0}", allNodes.Count);
 
@@ -241,10 +245,10 @@ namespace Opc.Ua.Client.ComplexTypes.Tests
         }
 
         [Test, Order(400)]
-        public async Task ReadWriteScalaVariableType()
+        public async Task ReadWriteScalarVariableTypeAsync()
         {
             var samples = new ClientSamples(TestContext.Out, null, null, true);
-            await samples.LoadTypeSystem(m_session).ConfigureAwait(false);
+            await samples.LoadTypeSystemAsync(m_session).ConfigureAwait(false);
 
             // test the static version of the structure
             ExpandedNodeId structureVariable = TestData.VariableIds.Data_Static_Structure_ScalarStructure;
