@@ -71,12 +71,6 @@ namespace FullAlarms
             Utils.LogTrace("NonExclusiveLevelHolder alarm typedefinition {0}", m_alarm.TypeDefinitionId);
         }
 
-        public override void SetBranching(bool value)
-        {
-            m_supportsBranching = value;
-        }
-
-
         private NonExclusiveLevelAlarmState GetAlarm()
         {
             return (NonExclusiveLevelAlarmState)m_alarm;

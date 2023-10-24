@@ -318,14 +318,10 @@ namespace FullAlarms
             get { return m_supportsBranching; }
         }
 
-        public virtual void SetBranching(bool value)
+        public void SetBranching(bool value)
         {
-
+            m_supportsBranching = value;
         }
-
-
-
-
 
         #endregion
 

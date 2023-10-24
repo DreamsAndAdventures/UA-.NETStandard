@@ -226,7 +226,7 @@ namespace FullAlarms
 
                     #region Create Alarms
 
-                    string[] folders = { "Mandatory", "Optional", "NoSource" };
+                    string[] folders = { "Mandatory", "Optional", "NoSource", "Branch" };
 
                     NodeId nullNodeId = new NodeId(0);
 
@@ -244,7 +244,8 @@ namespace FullAlarms
                         string name = intervalString;// + "." + subFoldersName;
                         string alternateName = alternateIntervalString;
 
-                        bool optional = folder.Equals("Optional", StringComparison.OrdinalIgnoreCase);
+                        bool optional = folder.Equals("Optional", StringComparison.OrdinalIgnoreCase) ||
+                            folder.Equals("Branch", StringComparison.OrdinalIgnoreCase);
 
                         AlarmHolder derivedCondition = new DerivedConditionTypeHolder(
                             this,
@@ -420,7 +421,7 @@ namespace FullAlarms
 
                     AddPredefinedNode(SystemContext, alarmsFolder);
                     StartTimer();
-                    Start(startMethod, 30000, false);
+                    Start(startMethod, uint.MaxValue);
                     m_allowEntry = true;
 
                 }
@@ -542,9 +543,9 @@ namespace FullAlarms
             IList<object> outputArguments)
         {
             // all arguments must be provided.
-            UInt32 seconds = 30000;
+            UInt32 seconds = uint.MaxValue;
 
-            return Start(node, seconds, false);
+            return Start(node, seconds);
         }
 
         public ServiceResult OnStartBranch(
@@ -554,12 +555,12 @@ namespace FullAlarms
             IList<object> outputArguments)
         {
             // all arguments must be provided.
-            UInt32 seconds = 120;
+            UInt32 seconds = uint.MaxValue;
 
-            return Start(node, seconds, true);
+            return Start(node, seconds);
         }
 
-        private ServiceResult Start(NodeState node, uint seconds, bool branch)
+        private ServiceResult Start(NodeState node, uint seconds)
         {
             ServiceResult result = ServiceResult.Good;
 
@@ -575,8 +576,10 @@ namespace FullAlarms
 
                 lock (m_alarms)
                 {
-                    foreach (SourceController sourceController in sourceControllers.Values)
+                    foreach (KeyValuePair<string, SourceController> pair in sourceControllers )
                     {
+                        SourceController sourceController = pair.Value;
+
                         IList<IReference> references = new List<IReference>();
                         sourceController.Source.GetReferences(SystemContext, references, ReferenceTypes.HasCondition, false);
                         foreach (IReference reference in references)
@@ -585,7 +588,7 @@ namespace FullAlarms
                             if (m_alarms.ContainsKey(identifier))
                             {
                                 AlarmHolder holder = m_alarms[identifier];
-                                if (branch)
+                                if ( identifier.Contains("s=Branch_"))
                                 {
                                     holder.SetBranching(true);
                                 }

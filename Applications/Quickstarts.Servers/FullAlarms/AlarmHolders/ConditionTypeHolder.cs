@@ -28,6 +28,7 @@
  * ======================================================================*/
 
 using System;
+using System.Collections.Generic;
 
 using Opc.Ua;
 
@@ -107,6 +108,7 @@ namespace FullAlarms
 
                 int currentSeverity = alarm.Severity.Value;
                 int newSeverity = GetSeverity();
+
                 // A branch is created at the end of an active cycle
                 // This could be a transition between alarm states,
                 // or a transition to inactive
@@ -115,12 +117,64 @@ namespace FullAlarms
                     newSeverity != currentSeverity)
                 {
                     NodeId branchId = GetNewBranchId();
+                    
                     ConditionState branch = alarm.CreateBranch(SystemContext, branchId);
 
                     string postEventId = Utils.ToHexString(branch.EventId.Value as byte[]);
 
                     Log("CreateBranch", " Branch " + branchId.ToString() +
                         " EventId " + postEventId + " created, Message " + alarm.Message.Value.Text);
+
+                    int branchCount = alarm.GetBranchCount();
+
+                    uint keepCount = 25;
+
+                    TimeSpan timeSpan = new TimeSpan(hours:0, minutes:10, seconds: 0);
+                    DateTime now = DateTime.Now;
+                    DateTime limitTime = now.Subtract(timeSpan);
+
+                    if ( branchCount > keepCount )
+                    {
+                        // Get rid of old branches
+                        uint keepLimit = m_branchCounter - keepCount;
+
+                        Dictionary<string, ConditionState> branches = alarm.GetBranches();
+
+                        foreach( KeyValuePair< string, ConditionState> pair in branches )
+                        {
+                            ConditionState conditionBranch = pair.Value;
+
+                            bool remove = false;
+                            uint branchNumericId = (uint)conditionBranch.BranchId.Value.Identifier;
+                            if ( branchNumericId < keepLimit )
+                            {
+                                AcknowledgeableConditionState ackState = conditionBranch as AcknowledgeableConditionState;
+                                if ( ackState != null )
+                                {
+                                    if ( ackState.AckedState.Id.Value == true )
+                                    {
+                                        // Only get rid of this if it's over ten minutes old
+                                        if ( ackState.Time.Value <= limitTime )
+                                        {
+                                            remove = true;
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    remove = true;
+                                }
+                            }
+
+                            if ( remove )
+                            {
+                                Log("Removing Branch", " Branch " + branchId.ToString() +
+                                    " EventId " + pair.Key);
+
+                                branches.Remove( pair.Key );
+                            }
+                        }
+                    }
 
                     m_alarmController.SetBranchCount(alarm.GetBranchCount());
                 }
