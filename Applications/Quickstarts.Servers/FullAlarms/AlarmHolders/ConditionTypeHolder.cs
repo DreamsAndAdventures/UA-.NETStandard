@@ -199,6 +199,10 @@ namespace FullAlarms
                     message = "Alarm Event Value = " + m_trigger.Value.ToString();
                 }
 
+                message = "[" + m_eventCounter.ToString() + "] " + message;
+
+                m_eventCounter++;
+
                 alarm.Message.Value = new LocalizedText("en", message);
 
                 ReportEvent();

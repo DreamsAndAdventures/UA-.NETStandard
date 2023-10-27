@@ -490,6 +490,7 @@ namespace FullAlarms
         protected string m_alarmTypeName = "";
         protected SupportedAlarmConditionType m_alarmConditionType = null;
         protected List<string> m_delayedMessages = new List<string>();
+        protected int m_eventCounter = 0;
         #endregion
 
 
