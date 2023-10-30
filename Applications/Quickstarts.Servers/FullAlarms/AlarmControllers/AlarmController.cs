@@ -56,6 +56,7 @@ namespace FullAlarms
         private int m_branchCount = 0;
         private bool m_supportsBranching = false;
         protected int m_midpoint = AlarmDefines.NORMAL_START_VALUE;
+        private bool m_pause = false;
         #endregion
 
 
@@ -180,7 +181,14 @@ namespace FullAlarms
                 if (DateTime.Now > m_nextTime)
                 {
                     SetNextInterval();
-                    setValue = true;
+                    if (m_pause)
+                    {
+                        m_pause = false;
+                    }
+                    else
+                    {
+                        setValue = true;
+                    }
                 }
             }
 
@@ -322,17 +330,26 @@ namespace FullAlarms
 
         public virtual void OnAddComment()
         {
-
+            if ( !SupportsBranching )
+            {
+                m_pause = true;
+            }
         }
 
         public virtual void OnAcknowledge()
         {
-
+            if (!SupportsBranching)
+            {
+                m_pause = true;
+            }
         }
 
         public virtual void OnConfirm()
         {
-
+            if (!SupportsBranching)
+            {
+                m_pause = true;
+            }
         }
     }
 }

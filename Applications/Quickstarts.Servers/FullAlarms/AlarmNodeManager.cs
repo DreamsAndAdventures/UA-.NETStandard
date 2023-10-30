@@ -226,7 +226,8 @@ namespace FullAlarms
 
                     #region Create Alarms
 
-                    string[] folders = { "Mandatory", "Optional", "NoSource", "Branch" };
+//                    string[] folders = { "Mandatory", "Optional", "NoSource", "Branch" };
+                    string[] folders = { "Mandatory", "Optional" };
 
                     NodeId nullNodeId = new NodeId(0);
 

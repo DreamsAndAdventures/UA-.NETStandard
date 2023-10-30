@@ -156,50 +156,6 @@ namespace Pi
 
                     #endregion
 
-//                    #region Modelling - doesn't work
-
-//                    NodeStateCollection predefinedNodes = new NodeStateCollection();
-
-//                    List<string> files = new List<string>();
-
-////                    files.Add("Opc.Ua.NodeSet2.xml");
-//                    files.Add("Opc.Ua.Di.NodeSet2.xml");
-//                    files.Add("opc.ua.fx.data.nodeset2.xml");
-//                    files.Add("opc.ua.fx.ac.nodeset2.xml");
-
-//                    foreach( string file in files)
-//                    {
-//                        Debug.WriteLine("File " + file);
-//                        Stream stream = new FileStream(file, FileMode.Open);
-//                        Opc.Ua.Export.UANodeSet nodeSet = Opc.Ua.Export.UANodeSet.Read(stream);
-
-//                        foreach( string namespaceUri in nodeSet.NamespaceUris)
-//                        {
-//                            Debug.WriteLine("\tNameSpace " + namespaceUri);
-//                        }
-
-//                        Debug.WriteLine("NameSpaces " + nodeSet.NamespaceUris.ToString());
-//                        SystemContext.NamespaceUris.Append(nodeSet.NamespaceUris.ToString());
-//                        nodeSet.Import(SystemContext, predefinedNodes);
-
-//                        for (int ii = 0; ii < predefinedNodes.Count; ii++)
-//                        {
-//                            string nodeId = predefinedNodes[ii].NodeId.ToString();
-//                            string browseName = predefinedNodes[ii].BrowseName.Name;
-//                            Debug.WriteLine(nodeId + ":" + browseName);
-
-//                            if (browseName.Equals("HasBuiltInAsset"))
-//                            {
-//                                Debug.WriteLine("Gonna Wait");
-//                            }
-//                            AddPredefinedNode(SystemContext, predefinedNodes[ii]);
-//                        }
-//                    }
-
-//                    // ensure the reverse refernces exist.
-//                    AddReverseReferences(externalReferences);
-
-//                    #endregion
 
                     AddPredefinedNode(SystemContext, PiFolder);
                     StartTimer();
