@@ -116,7 +116,7 @@ namespace FullAlarms
 
                 alarm.OnShelve = OnShelve;
                 alarm.OnTimedUnshelve = OnTimedUnshelve;
-                alarm.UnshelveTimeUpdateRate = 2000;
+                alarm.UnshelveTimeUpdateRate = 500;
 
                 alarm.MaxTimeShelved.Value = maxTimeShelved;
 
@@ -142,23 +142,31 @@ namespace FullAlarms
             bool setValue = false;
             AlarmConditionState alarm = GetAlarm();
 
-
             if (ShouldEvent())
             {
-                alarm.SetActiveState(SystemContext, IsActive());
+                bool isActive = IsActive();
+                alarm.SetActiveState(SystemContext, isActive);
 
                 setValue = true;
+
+                if ( Optional && isActive && alarm.SuppressedOrShelved.Value )
+                {
+                    if ( alarm.ShelvingState.CurrentState.Id.Value.Equals( ObjectIds.ShelvedStateMachineType_OneShotShelved ) )
+                    {
+                        Log( "SetValue", alarm.NodeId.ToString() + " Setting ShelvingState to Unshelved due to change in state" );
+
+                        alarm.SetShelvingState(SystemContext, shelved: false, oneShot: false, shelvingTime: 0.0);
+                    }
+                    else if (alarm.ShelvingState.CurrentState.Id.Value.Equals(ObjectIds.ShelvedStateMachineType_TimedShelved))
+                    {
+                        Log("SetValue", alarm.NodeId.ToString() + " Should Not Event due to timed Shelve");
+
+                        setValue = false;
+                    }
+                }
             }
 
             if (UpdateSuppression())
-            {
-                if (message.Length <= 0)
-                {
-                    message = "Updating due to Shelving State Update: " + alarm.ShelvingState.CurrentState.Value.ToString();
-                }
-                setValue = true;
-            }
-            else if (UpdateSuppression())
             {
                 if (message.Length <= 0)
                 {
@@ -209,6 +217,7 @@ namespace FullAlarms
         protected override bool UpdateShelving()
         {
             // Don't have to worry about changing state to Unshelved, there is an SDK timer to deal with that.
+
             bool update = false;
 
             return update;
@@ -279,7 +288,7 @@ namespace FullAlarms
             {
                 shelved = "Unshelved";
             }
-
+            Log("OnShelve", alarm.NodeId.ToString() + " is " + shelved + dueTo );
             alarm.Message.Value = "The alarm is " + shelved + dueTo;
             alarm.SetShelvingState(context, shelving, oneShot, shelvingTime);
 

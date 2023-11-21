@@ -368,7 +368,7 @@ namespace FullAlarms
                 alarm.Message.Value = enabling ? "Enabling" : "Disabling" + " alarm " + MapName;
 
                 // if disabled, it will not fire
-                ReportEvent();
+                //ReportEvent();
             }
             else
             {
