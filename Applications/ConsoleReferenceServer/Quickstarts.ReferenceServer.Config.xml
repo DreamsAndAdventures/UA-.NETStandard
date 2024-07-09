@@ -307,6 +307,7 @@
     <!-- <TraceMasks>523</TraceMasks> -->
     <!-- Show Only Security, ServiceResultExceptions, Errors and Trace -->
     <TraceMasks>519</TraceMasks>
+    <!--<TraceMasks>1</TraceMasks>-->
   </TraceConfiguration>
 
 </ApplicationConfiguration>

@@ -546,7 +546,7 @@ namespace Opc.Ua
             Type systemType = m_context.Factory.GetSystemType(typeId);
 
             // decode known type.
-            if (systemType != null)
+             if (systemType != null)
             {
                 PushNamespace(m_reader.NamespaceURI);
                 var encodeable = ReadEncodeable(m_reader.LocalName, systemType, typeId);

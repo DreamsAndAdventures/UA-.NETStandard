@@ -212,7 +212,7 @@ namespace Opc.Ua.Server
                 CurrentSlice.OutOfDataRange = true;
             }
 
-            Utils.LogTrace("Computing Aggregate {0:HH:mm:ss.fff}", CurrentSlice.StartTime);
+            //Utils.LogTrace("Computing Aggregate {0:HH:mm:ss.fff}", CurrentSlice.StartTime);
 
             // compute the value.
             DataValue value = ComputeValue(CurrentSlice);
@@ -1439,20 +1439,22 @@ namespace Opc.Ua.Server
                 }
             }
 
-            if (totalCount == 0 || (goodCount / totalCount) * 100 >= Configuration.PercentDataGood)
+            statusCode = statusCode.SetCodeBits(StatusCodes.Good);
+
+            if (totalCount == 0 || (goodCount / totalCount) * 100 < Configuration.PercentDataGood)
             {
                 // good if the good count is greater than or equal to the configured threshold.
-                statusCode = statusCode.SetCodeBits(StatusCodes.Good);
-            }
-            else if ((badCount / totalCount) * 100 >= Configuration.PercentDataBad)
-            {
-                // bad if the bad count is greater than or equal to the configured threshold.
-                statusCode = StatusCodes.Bad;
-            }
-            else
-            {
-                // uncertain if did not meet the Good or Bad requirements
                 statusCode = statusCode.SetCodeBits(StatusCodes.UncertainDataSubNormal);
+            }
+
+            // Mantis 6227 https://mantis.opcfoundation.org/view.php?id=6227
+            if (Configuration.PercentDataGood != (100 - Configuration.PercentDataBad))
+            {
+                if ((badCount / totalCount) * 100 >= Configuration.PercentDataBad)
+                {
+                    // bad if the bad count is greater than or equal to the configured threshold.
+                    statusCode = StatusCodes.Bad;
+                }
             }
 
             return statusCode;

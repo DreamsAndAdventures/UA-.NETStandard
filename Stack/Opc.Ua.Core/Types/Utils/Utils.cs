@@ -352,11 +352,11 @@ namespace Opc.Ua
                         // limit the file size
                         bool truncated = false;
 
-                        if (file.Exists && file.Length > 10000000)
-                        {
-                            file.Delete();
-                            truncated = true;
-                        }
+                        //if (file.Exists && file.Length > 100000000 )
+                        //{
+                        //    file.Delete();
+                        //    truncated = true;
+                        //}
 
                         using (StreamWriter writer = new StreamWriter(File.Open(file.FullName, FileMode.Append, FileAccess.Write, FileShare.Read)))
                         {

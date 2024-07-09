@@ -226,8 +226,8 @@ namespace FullAlarms
 
                     #region Create Alarms
 
-//                    string[] folders = { "Mandatory", "Optional", "NoSource", "Branch" };
-                    string[] folders = { "Mandatory", "Optional" };
+                    string[] folders = { "Mandatory", "Optional", "NoSource", "Branch" };
+//                    string[] folders = { "Mandatory", "Optional" };
 
                     NodeId nullNodeId = new NodeId(0);
 
@@ -248,29 +248,29 @@ namespace FullAlarms
                         bool optional = folder.Equals("Optional", StringComparison.OrdinalIgnoreCase) ||
                             folder.Equals("Branch", StringComparison.OrdinalIgnoreCase);
 
-                        AlarmHolder derivedCondition = new DerivedConditionTypeHolder(
-                            this,
-                            subFolder,
-                            analogSourceController,
-                            name,
-                            GetSupportedAlarmConditionType(ref conditionTypeIndex),
-                            alarmControllerType,
-                            interval,
-                            optional: optional);
+                        //AlarmHolder derivedCondition = new DerivedConditionTypeHolder(
+                        //    this,
+                        //    subFolder,
+                        //    analogSourceController,
+                        //    name,
+                        //    GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                        //    alarmControllerType,
+                        //    interval,
+                        //    optional: optional);
 
-                        AddAlarmHolder(folder, derivedCondition, ref nullNodeId);
+                        //AddAlarmHolder(folder, derivedCondition, ref nullNodeId);
 
-                        AlarmHolder derivedAcknowledgeableCondition = new DerivedAcknowledgeableConditionTypeHolder(
-                            this,
-                            subFolder,
-                            analogSourceController,
-                            name,
-                            GetSupportedAlarmConditionType(ref conditionTypeIndex),
-                            alarmControllerType,
-                            interval,
-                            optional: optional);
+                        //AlarmHolder derivedAcknowledgeableCondition = new DerivedAcknowledgeableConditionTypeHolder(
+                        //    this,
+                        //    subFolder,
+                        //    analogSourceController,
+                        //    name,
+                        //    GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                        //    alarmControllerType,
+                        //    interval,
+                        //    optional: optional);
 
-                        AddAlarmHolder(folder, derivedAcknowledgeableCondition, ref nullNodeId);
+                        //AddAlarmHolder(folder, derivedAcknowledgeableCondition, ref nullNodeId);
 
                         AlarmHolder derivedExclusiveLevel = new DerivedExclusiveLevelHolder(
                             this,

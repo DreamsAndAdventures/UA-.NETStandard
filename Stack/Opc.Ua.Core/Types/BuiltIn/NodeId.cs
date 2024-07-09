@@ -706,7 +706,8 @@ namespace Opc.Ua
                     e);
             }
 
-            throw argumentException;
+            return null;
+//            throw argumentException;
         }
         #endregion
 

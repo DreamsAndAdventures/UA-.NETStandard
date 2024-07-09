@@ -10,6 +10,8 @@ using Opc.Ua;
 using System.IO;
 using System.Diagnostics;
 using System.Xml.Linq;
+using System.Runtime.CompilerServices;
+using System.Data;
 
 #pragma warning disable CS0219 // Variable is assigned but its value is never used
 
@@ -407,6 +409,48 @@ namespace Aggregates
 
                     #region MultipleConfig
 
+                    string configs = "Configurations";
+                    string configsNodeName = AggregatesName + "." + configs;
+                    FolderState configsFolder = CreateFolder(AggregatesFolder, configsNodeName, configs);
+
+                    string originalConfigs = "Original";
+                    string originalConfigsNodeName = configsNodeName + "." + originalConfigs;
+                    FolderState originalConfigsFolder = CreateFolder(configsFolder, originalConfigsNodeName, originalConfigs);
+
+
+                    string haConfigName = "HA Configuration";
+                    string haConfigNodeName = originalConfigsNodeName + "." + haConfigName;
+                    DefaultConfig = CreateConfig(originalConfigsFolder,
+                        haConfigNodeName,
+                        haConfigName,
+                        percentBad: 100,
+                        percentGood: 100,
+                        uncertainAsBad: false,
+                        slopedExtrapolation: false,
+                        stepped: true);
+
+                    DefaultConfig.ReferenceTypeId = Opc.Ua.ReferenceTypeIds.HasHistoricalConfiguration;
+
+
+                    string alternateConfigs = "Alternate";
+                    string alternateConfigsNodeName = configsNodeName + "." + alternateConfigs;
+                    FolderState alternateConfigsFolder = CreateFolder(configsFolder, alternateConfigsNodeName, alternateConfigs);
+
+                     
+                    haConfigNodeName = alternateConfigsNodeName + "." + haConfigName;
+                    AlternateConfig = CreateConfig(alternateConfigsFolder,
+                        haConfigNodeName,
+                        haConfigName,
+                        percentBad: 100,
+                        percentGood: 100,
+                        uncertainAsBad: false,
+                        slopedExtrapolation: false,
+                        stepped: true);
+
+                    AlternateConfig.ReferenceTypeId = Opc.Ua.ReferenceTypeIds.HasHistoricalConfiguration;
+
+
+
                     string multipleConfig = "MultipleConfiguration";
                     string multipleConfigNodeName = AggregatesName + "." + multipleConfig;
                     FolderState multipleConfigFolder = CreateFolder(AggregatesFolder, multipleConfigNodeName, multipleConfig);
@@ -467,8 +511,121 @@ namespace Aggregates
 
                     CreateChildProperties(longTermParentConfig, longTermParentConfigNodeName);
 
+                    #region Child HA Configuration Status
+
+                    string aggregateConfigurationStatusName = "ConfigurationStatus";
+                    string aggregateConfigurationStatusNodeName = childConfigNodeName + "." + aggregateConfigurationStatusName;
+
+
+                    ConfigurationStatus = CreateVariable(childConfigFolder,
+                        aggregateConfigurationStatusNodeName, aggregateConfigurationStatusName, DataTypeIds.String, ValueRanks.Scalar);
+
+                    ConfigurationStatus.Value = "Normal";
+
+                    // Multiple Configurations Method
+
+                    string multipleMethodName = "MultipleConfigurations";
+                    string multipleMethodNodeName = childConfigNodeName + "." + multipleMethodName;
+                    MethodState multipleMethod = AlarmHelpers.CreateMethod(childConfigFolder, NamespaceIndex, multipleMethodNodeName, multipleMethodName);
+                    multipleMethod.OnCallMethod = new GenericMethodCalledEventHandler(MultipleConfigurationMethod);
+
+                    string noConfigurationMethodName = "NoConfiguration";
+                    string noConfigurationMethodNodeName = childConfigNodeName + "." + noConfigurationMethodName;
+                    MethodState noConfigurationMethod = AlarmHelpers.CreateMethod(childConfigFolder, NamespaceIndex, noConfigurationMethodNodeName, noConfigurationMethodName);
+                    noConfigurationMethod.OnCallMethod = new GenericMethodCalledEventHandler(NoConfigurationMethod);
+
+                    string noConfigurationAllMethodName = "NoConfigurationAll";
+                    string noConfigurationAllMethodNodeName = childConfigNodeName + "." + noConfigurationAllMethodName;
+                    MethodState noConfigurationAllMethod = AlarmHelpers.CreateMethod(childConfigFolder,
+                        NamespaceIndex, noConfigurationAllMethodNodeName, noConfigurationAllMethodName);
+                    noConfigurationAllMethod.OnCallMethod = new GenericMethodCalledEventHandler(NoConfigurationMethodAll);
+
+                    string resetConfigurationMethodName = "ResetConfiguration";
+                    string resetConfigurationMethodNodeName = childConfigNodeName + "." + resetConfigurationMethodName;
+                    MethodState resetConfigurationMethod = AlarmHelpers.CreateMethod(childConfigFolder, NamespaceIndex, resetConfigurationMethodNodeName, resetConfigurationMethodName);
+                    resetConfigurationMethod.OnCallMethod = new GenericMethodCalledEventHandler(ResetConfigurationMethod);
+
+
+                    // No Configurations Method
+
+                    // Reset
+
+
+
+
+                    #endregion
+
+
                     CreateParentVariables(childConfigFolder,
                         childConfigNodeName);
+
+                    #endregion
+
+                    string folder7773Name = "7773";
+                    string folder7773NodeName = AggregatesName + "." + folder7773Name;
+                    FolderState folder7773 = CreateFolder(AggregatesFolder, folder7773NodeName, folder7773Name);
+
+                    #region 7773
+                    {
+                        string[] names = new string[] {
+                            "GoodUncertainBadGood",
+                            "GoodBadUncertainGood",
+                            "GoodUncertainBad",
+                            "GoodBadUncertain",
+                        };
+
+                        foreach( string name in names)
+                        {
+                            NodeId dataType = DataTypeIds.Double;
+                            if ( name.EndsWith( "Good" ) )
+                            {
+                                dataType = DataTypeIds.Int32;
+                            }
+
+                            string nodeName = folder7773NodeName + "_" + name;
+                            BaseDataVariableState variable = CreateVariable(folder7773,
+                                nodeName, name, dataType, ValueRanks.Scalar);
+                            variable.AccessLevel = AccessLevels.HistoryRead;
+                            variable.UserAccessLevel = AccessLevels.HistoryRead;
+                            variable.AccessLevelEx = AccessLevels.HistoryRead;
+
+                            string startOfBadDataName = "StartOfBadData";
+                            string startOfBadDataNodeName = nodeName + "." + startOfBadDataName;
+                            CreateProperty(variable, startOfBadDataNodeName, startOfBadDataName,
+                                Opc.Ua.DataTypeIds.DateTime, ValueRanks.Scalar);
+
+                            variable.AddReference(ReferenceTypes.HasHistoricalConfiguration, isInverse: false, DefaultConfig.NodeId);
+                            DefaultConfig.AddReference(ReferenceTypes.HasHistoricalConfiguration, isInverse: true, variable.NodeId);
+                        }
+
+
+                    }
+                    #endregion
+
+                    #region Customer Data 7773
+
+                    {
+                        string customerDataName = "CustomerData";
+                        string nodeName = folder7773NodeName + "_" + customerDataName;
+                        BaseDataVariableState variable = CreateVariable(folder7773,
+                            nodeName, customerDataName, DataTypeIds.Int32, ValueRanks.Scalar);
+                        variable.AccessLevel = AccessLevels.HistoryRead;
+                        variable.UserAccessLevel = AccessLevels.HistoryRead;
+                        variable.AccessLevelEx = AccessLevels.HistoryRead;
+
+                        string startOfBadDataName = "StartOfBadData";
+                        string startOfBadDataNodeName = nodeName + "." + startOfBadDataName;
+                        CreateProperty(variable, startOfBadDataNodeName, startOfBadDataName,
+                            Opc.Ua.DataTypeIds.DateTime, ValueRanks.Scalar);
+
+                        variable.AddReference(ReferenceTypes.HasHistoricalConfiguration, isInverse: false, DefaultConfig.NodeId);
+                        DefaultConfig.AddReference(ReferenceTypes.HasHistoricalConfiguration, isInverse: true, variable.NodeId);
+
+                        Get7773CustomerData(variable);
+                     }
+
+                    // How do I insert annotation??
+
 
                     #endregion
 
@@ -510,7 +667,6 @@ namespace Aggregates
         private void CreateParentVariables(NodeState parent,
             string parentName)
         {
-            HistoricalDataConfigurationState defaultConfig = null;
             HistoricalDataConfigurationState secondParent = null;
             HistoricalDataConfigurationState longTermConfig = null;
 
@@ -536,25 +692,15 @@ namespace Aggregates
                     CreateProperty(variable, startOfBadDataNodeName, startOfBadDataName,
                         Opc.Ua.DataTypeIds.DateTime, ValueRanks.Scalar);
 
-                    if (defaultConfig == null)
+                    if ( suffix == "First" )
                     {
-                        string configName = "HA Configuration";
-                        string configNodeName = nodeName + "." + configName;
-                        defaultConfig = CreateConfig(variable,
-                            configNodeName,
-                            configName,
-                            percentBad: 100,
-                            percentGood: 100,
-                            uncertainAsBad: false,
-                            slopedExtrapolation: false,
-                            stepped: true);
-
-                        defaultConfig.ReferenceTypeId = Opc.Ua.ReferenceTypeIds.HasHistoricalConfiguration;
+                        variable.AddReference(ReferenceTypes.HasHistoricalConfiguration, isInverse: false, DefaultConfig.NodeId);
+                        DefaultConfig.AddReference(ReferenceTypes.HasHistoricalConfiguration, isInverse: true, variable.NodeId);
                     }
                     else
                     {
-                        variable.AddReference(ReferenceTypes.HasHistoricalConfiguration, isInverse: false, defaultConfig.NodeId);
-                        defaultConfig.AddReference(ReferenceTypes.HasHistoricalConfiguration, isInverse: true, variable.NodeId);
+                        variable.AddReference(ReferenceTypes.HasHistoricalConfiguration, isInverse: false, AlternateConfig.NodeId);
+                        AlternateConfig.AddReference(ReferenceTypes.HasHistoricalConfiguration, isInverse: true, variable.NodeId);
                     }
 
                     if (secondParent == null)
@@ -786,6 +932,10 @@ namespace Aggregates
 
             if (readRawDetails != null)
             {
+                if ( readRawDetails.NumValuesPerNode == 360 )
+                {
+                    bool wait = true;
+                }
                 return HistoryReadRaw(
                     context,
                     variable,
@@ -839,7 +989,7 @@ namespace Aggregates
                 return status;
             }
 
-            DataValueCollection dataValues = GetValues(source);
+            DataValueCollection dataValues = GetTestData(source);
             if (dataValues != null)
             {
                 DataValueCollection timedCollection = GetTimedData( dataValues, details.StartTime, details.EndTime );
@@ -933,8 +1083,8 @@ namespace Aggregates
                     HistoricalDataConfigurationState configState = nodeHandle.Node as HistoricalDataConfigurationState;
                     if (configState != null)
                     {
-                        DataValueCollection dataValues = GetSpecData(source);
-                        DataValueCollection timedCollection = GetTimedData(dataValues, details.StartTime, details.EndTime);
+                        DataValueCollection dataValues = GetTestData(source);
+                        DataValueCollection timedCollection = GetOrderedData(dataValues, details.StartTime, details.EndTime);
 
                         IAggregateCalculator aggregateCalculator = Aggregators.CreateStandardCalculator(
                             aggregateNodeId,
@@ -1039,7 +1189,7 @@ namespace Aggregates
                         steppedInterpolation = historicalDataConfiguration.Stepped.Value;
                     }
 
-                    DataValueCollection timedCollection = GetTimedData(rawData, details.StartTime, details.EndTime);
+                    DataValueCollection timedCollection = GetOrderedData(rawData, details.StartTime, details.EndTime);
 
                     double processingInterval = details.ProcessingInterval;
                     if ( oneInterval )
@@ -1055,6 +1205,12 @@ namespace Aggregates
                         steppedInterpolation,
                         details.AggregateConfiguration);
 
+                    if ( details.ProcessingInterval < 0 )
+                    {
+                        Utils.LogError("How do we get processing interval less than zero? "+ details.ProcessingInterval.ToString());
+                        return StatusCodes.BadInvalidArgument;
+                    }
+
                     Utils.LogInfo("HistoryReadProcessed Creating Calculator {0} {1} {2} {3} {4} {5} {6} {7} {8}",
                         aggregateNodeId.ToString(),
                         FormatDateTime(details.StartTime),
@@ -1065,6 +1221,7 @@ namespace Aggregates
                         details.AggregateConfiguration.PercentDataGood,
                         details.AggregateConfiguration.TreatUncertainAsBad,
                         details.AggregateConfiguration.UseSlopedExtrapolation);
+                    Utils.LogInfo("HistoryReadProcessed Raw Data Count = {0}", timedCollection.Count.ToString());
 
                     DataValueCollection processed = new DataValueCollection();
 
@@ -1180,6 +1337,174 @@ namespace Aggregates
             return StatusCodes.BadHistoryOperationUnsupported;
         }
 
+
+        public ServiceResult MultipleConfigurationMethod(
+            ISystemContext context,
+            NodeState node,
+            IList<object> inputArguments,
+            IList<object> outputArguments)
+        {
+            ServiceResult result = ServiceResult.Good;
+
+            ModifyConfigReferences(context, node, enable: true, all: false);
+
+            ModifyAlternateConfigParameters(context, true);
+
+            UpdateConfigStatus(context, "Multiple Configurations");
+
+            return result;
+        }
+
+        private void UpdateConfigStatus(ISystemContext context, string status )
+        {
+            ConfigurationStatus.Value = status;
+
+            ConfigurationStatus.ClearChangeMasks(context, false);
+        }
+
+        private void ModifyConfigReferences( ISystemContext context, NodeState node, bool enable, bool all )
+        {
+            MethodState methodNode = node as MethodState;
+
+            if (methodNode != null)
+            {
+                NodeState folderNodeState = methodNode.Parent;
+
+                if (folderNodeState != null)
+                {
+                    List<Tuple<string, NodeId>> tuples = GetTypeTuples();
+                    List<string> suffixes = new List<string>();
+                    suffixes.Add("First");
+                    suffixes.Add("Second");
+
+                    foreach (Tuple<string, NodeId> tuple in tuples)
+                    {
+                        foreach (string suffix in suffixes)
+                        {
+                            NodeId nodeId = AlternateConfig.NodeId;
+                            bool run = true;
+                            if ( suffix.Equals("First") )
+                            {
+                                nodeId = DefaultConfig.NodeId;
+                                if ( enable == false && all == false )
+                                {
+                                    run = false;
+                                }
+                            }
+
+                            if (run)
+                            {
+                                string name = folderNodeState.BrowseName.Name + "_" + tuple.Item1 + "_" + suffix;
+                                QualifiedName qualifiedName = new QualifiedName(name, NamespaceIndex);
+
+                                BaseInstanceState baseInstanceState = folderNodeState.FindChild(context,
+                                    qualifiedName);
+
+                                BaseDataVariableState dataState = baseInstanceState as BaseDataVariableState;
+
+                                if (dataState != null)
+                                {
+                                    if ( dataState.ReferenceExists( ReferenceTypes.HasHistoricalConfiguration, false, nodeId ) )
+                                    {
+                                        if ( !enable )
+                                        {
+                                            dataState.RemoveReference(ReferenceTypes.HasHistoricalConfiguration, false, nodeId);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if ( enable )
+                                        {
+                                            dataState.AddReference(ReferenceTypes.HasHistoricalConfiguration, isInverse: false, nodeId);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private void ModifyAlternateConfigParameters(ISystemContext context, bool value )
+        {
+            // Make sure the parameters are different now
+            string aggConfig = AlternateConfig.BrowseName + "_AggregateConfiguration";
+            string uncertainAsBad = aggConfig + "_TreatUncertainAsBad";
+            string useSlopedExtrapolation = aggConfig + "_UseSlopedExtrapolation";
+            BaseInstanceState aggregateConfig = AlternateConfig.FindChild(context, Opc.Ua.BrowseNames.AggregateConfiguration);
+            if (aggregateConfig != null)
+            {
+                BaseInstanceState uncertainState = aggregateConfig.FindChild(context, Opc.Ua.BrowseNames.TreatUncertainAsBad);
+                PropertyState<bool> uncertainPropertyState = uncertainState as PropertyState<bool>;
+                if (uncertainPropertyState != null)
+                {
+                    uncertainPropertyState.Value = value;
+                }
+
+                BaseInstanceState slopedExtrapolation = aggregateConfig.FindChild(context, Opc.Ua.BrowseNames.UseSlopedExtrapolation);
+                PropertyState<bool> slopedExtrapolationPropertyState = slopedExtrapolation as PropertyState<bool>;
+
+                if (slopedExtrapolationPropertyState != null)
+                {
+                    slopedExtrapolationPropertyState.Value = value;
+
+                }
+
+                aggregateConfig.ClearChangeMasks(context, includeChildren: true);
+            }
+        }
+
+        public ServiceResult NoConfigurationMethod(
+            ISystemContext context,
+            NodeState node,
+            IList<object> inputArguments,
+            IList<object> outputArguments)
+        {
+            ServiceResult result = ServiceResult.Good;
+
+            ModifyConfigReferences(context, node, enable: false, all: false);
+
+            UpdateConfigStatus(context, "Alternate Configurations have no references");
+
+
+            return result;
+        }
+
+        public ServiceResult NoConfigurationMethodAll(
+            ISystemContext context,
+            NodeState node,
+            IList<object> inputArguments,
+            IList<object> outputArguments)
+        {
+            ServiceResult result = ServiceResult.Good;
+
+            ModifyConfigReferences(context, node, enable: false, all: true);
+
+            UpdateConfigStatus(context, "All Configurations have no references");
+
+
+            return result;
+        }
+
+        public ServiceResult ResetConfigurationMethod(
+            ISystemContext context,
+            NodeState node,
+            IList<object> inputArguments,
+            IList<object> outputArguments)
+        {
+            ServiceResult result = ServiceResult.Good;
+
+            ModifyConfigReferences(context, node, enable: true, all: true);
+
+            ModifyAlternateConfigParameters(context, false);
+
+            UpdateConfigStatus(context, "Normal");
+
+            return result;
+        }
+
+
         private string FormatDateTime(DateTime dateTime)
         {
             StringBuilder builder = new StringBuilder();
@@ -1230,37 +1555,120 @@ namespace Aggregates
             }
         }
 
+        private DataValueCollection GetOrderedData(DataValueCollection dataValues, DateTime startTime, DateTime endTime)
+        {
+            DataValueCollection collection = new DataValueCollection();
+
+            bool forward = true;
+            if (endTime < startTime)
+            {
+                forward = false;
+            }
+
+            DataValueCollection working = new DataValueCollection();
+
+            if (dataValues != null)
+            {
+                DataValue[] dataValueArray = new DataValue[dataValues.Count];
+
+                int lastIndex = dataValues.Count - 1;
+
+                for (int index = 0; index < dataValues.Count; index++)
+                {
+                    if (forward)
+                    {
+                        dataValueArray[index] = dataValues[index];
+                    }
+                    else
+                    {
+                        int reverseIndex = lastIndex - index;
+                        dataValueArray[reverseIndex] = dataValues[index];
+                    }
+                }
+
+                collection = new DataValueCollection(dataValueArray);
+            }
+
+            return collection;
+        }
+
         private DataValueCollection GetTimedData(DataValueCollection dataValues, DateTime startTime, DateTime endTime)
         {
+            Utils.LogInfo("GetTimedData startTime {0} endTime {1} dataValues count {2} ",
+                FormatDateTime(startTime),
+                FormatDateTime(endTime),
+                dataValues.Count.ToString());
 
             DataValueCollection collection = new DataValueCollection();
 
             DateTime localStartTime = startTime;
             DateTime localEndTime = endTime;
 
-            if (dataValues != null)
+            bool forward = true;
+            if ( endTime < startTime )
             {
-                DataValueCollection working = new DataValueCollection( dataValues );
+                localEndTime = startTime;
+                localStartTime = endTime;
+                forward = false;
+            }
 
-                if ( endTime < startTime )
-                {
-                    Utils.LogInfo("Current Query is reverse");
-                    working.Reverse();
-                    localEndTime = startTime;
-                    localStartTime = endTime;
-                }
+            DataValueCollection working = new DataValueCollection();
 
-                foreach (DataValue dataValue in working)
+            // Isolate the values first.
+            foreach (DataValue dataValue in dataValues)
+            {
+                if (dataValue.SourceTimestamp >= localStartTime &&
+                    dataValue.SourceTimestamp <= localEndTime)
                 {
-                    if ( dataValue.SourceTimestamp >= localStartTime &&
-                        dataValue.SourceTimestamp <= localEndTime)
-                    {
-                        collection.Add(dataValue);
-                    }
+                    working.Add(dataValue);
                 }
             }
 
+            if (dataValues != null)
+            {
+                DataValue[] dataValueArray = new DataValue[working.Count];
+
+                int lastIndex = working.Count - 1;
+
+                for (int index = 0; index < working.Count; index++)
+                {
+                    if (forward)
+                    {
+                        dataValueArray[index] = working[index];
+                    }
+                    else
+                    {
+                        int reverseIndex = lastIndex - index;
+                        dataValueArray[reverseIndex] = working[index];
+                    }
+                }
+
+                collection = new DataValueCollection(dataValueArray);
+            }
+
+            for( int index = 0; index < collection.Count; index++ )
+            {
+                DataValue dataValue = collection[index];
+                Utils.LogInfo("GetTimedData index [{0}] of [{1}] = {2}",
+                    index,
+                    collection.Count.ToString(),
+                    FormatDataValue( dataValue ) );
+            }
+
             return collection;
+        }
+
+        private string FormatDataValue( DataValue dataValue )
+        {
+            string value = "Null";
+            if ( dataValue.Value != null )
+            {
+                value = dataValue.Value.ToString(); 
+            }
+            return string.Format( "{0} {1} {2}",
+                dataValue.StatusCode.ToString(),
+                value,
+                FormatDateTime( dataValue.ServerTimestamp) );
         }
 
         #region Creation Helpers
@@ -1288,12 +1696,15 @@ namespace Aggregates
             historicalDataConfigurationState.AggregateConfiguration.UseSlopedExtrapolation =
                 new PropertyState<bool>(historicalDataConfigurationState.AggregateConfiguration) { Value = slopedExtrapolation };
 
+            NodeId desiredNodeId = new NodeId(path, NamespaceIndex);
             historicalDataConfigurationState.Create(
                 SystemContext,
-                new NodeId(path, NamespaceIndex),
+                desiredNodeId,
                 new QualifiedName(name, NamespaceIndex),
                 new LocalizedText(name),
                 assignNodeIds: true);
+
+            //historicalDataConfigurationState.NodeId = desiredNodeId;
 
             historicalDataConfigurationState.Definition = null;
             historicalDataConfigurationState.ExceptionDeviation = null;
@@ -1524,9 +1935,13 @@ namespace Aggregates
             {
                 dataValues = GetSpecData(nodeState);
             }
+            else if ( nodeState.NodeId.ToString().Contains( "7773" ) )
+            {
+                dataValues = Get7773Data(nodeState);
+            }
             else
             {
-                dataValues = GetTestData(nodeState);
+                dataValues = GetCTTData(nodeState);
             }
 
             return dataValues;
@@ -2038,6 +2453,34 @@ namespace Aggregates
 
             string nodeIdString = nodeState.NodeId.ToString();
 
+            int specIndex = GetSpecIndex(nodeState.NodeId);
+            if (specIndex > 0)
+            {
+                collection = GetSpecData(nodeState);
+            }
+            else if ( nodeIdString.Contains( "7773_CustomerData" ) )
+            {
+                collection = Get7773CustomerData(nodeState);
+            }
+            else if (nodeIdString.Contains("7773") )
+            {
+                collection = Get7773Data(nodeState);
+            }
+            else
+            {
+                collection = GetCTTData(nodeState);
+            }
+
+            return collection;
+        }
+
+
+        private DataValueCollection GetCTTData(BaseVariableState nodeState)
+        {
+            DataValueCollection collection = null;
+
+            string nodeIdString = nodeState.NodeId.ToString();
+
             if (!Data.TryGetValue(nodeIdString, out collection))
             {
                 #region whichone
@@ -2203,6 +2646,244 @@ namespace Aggregates
             return collection;
         }
 
+        private DataValueCollection Get7773Data(BaseVariableState nodeState)
+        {
+            DataValueCollection collection = null;
+
+            string nodeIdString = nodeState.NodeId.ToString();
+
+            if (!Data.TryGetValue(nodeIdString, out collection))
+            {
+                uint dataTypeId = (uint)nodeState.DataType.Identifier;
+
+                int numberOfValues = MINIMAL_NUMBER_OF_VALUES_TO_ADD;
+                collection = new DataValueCollection(numberOfValues);
+
+                DateTime startTime = DateTime.UtcNow;
+                double seed = startTime.Millisecond / startTime.Minute;
+
+                if (seed < 1)
+                {
+                    seed += startTime.Second;
+                }
+
+                int numberOfSecondsToSubtract = numberOfValues * 1000;
+                DateTime workingTime = startTime.AddMilliseconds(-numberOfSecondsToSubtract);
+                int millisecondInterval = GetMillisecondInterval(dataTypeId);
+
+                StatusCode firstStatus = StatusCodes.Bad;
+                StatusCode secondStatus = StatusCodes.Uncertain;
+
+                if (nodeIdString.Contains("GoodUncertain"))
+                {
+                    firstStatus = StatusCodes.Uncertain;
+                    secondStatus = StatusCodes.Bad;
+                }
+
+                bool stayBad = false;
+
+                if (!nodeIdString.EndsWith( "Good" ))
+                {
+                    stayBad = true;
+                }
+
+                bool startOfBadData = false;
+
+                for (int index = 0; index < numberOfValues; index++)
+                {
+                    Variant variant = GetSineVariant(dataTypeId, seed, index);
+                    Annotation annotation = new Annotation();
+                    annotation.AnnotationTime = workingTime;
+                    annotation.Message = "Any Annotation";
+                    annotation.UserName = "Archie";
+
+                    ExtensionObject extensionObject = new ExtensionObject(Opc.Ua.DataTypeIds.Annotation, annotation);
+
+                    Variant anAnnotation = new Variant(extensionObject);
+
+                    StatusCode valueStatus = StatusCodes.Good;
+
+                    if (index == 50)
+                    {
+                        valueStatus = firstStatus;
+                    }
+                    else if (index > 50)
+                    {
+                        if (index == 51 || stayBad)
+                        {
+                            valueStatus = secondStatus;
+                        }
+                    }
+
+                    if ( StatusCode.IsBad( valueStatus ))
+                    {
+                        variant = new Variant();
+
+                        if ( !startOfBadData )
+                        {
+                            List<BaseInstanceState> children = new List<BaseInstanceState>();
+
+                            nodeState.GetChildren(SystemContext, children);
+                            foreach (BaseInstanceState child in children)
+                            {
+                                if (child.SymbolicName.Equals("StartOfBadData"))
+                                {
+                                    BaseDataVariableState childVariable = child as BaseDataVariableState;
+                                    if (childVariable != null)
+                                    {
+                                        Utils.LogInfo("Creating bad Data for {0} as {1}",
+                                            nodeIdString, FormatDateTime(workingTime) );
+                                        childVariable.Value = new Variant(workingTime);
+                                        childVariable.StatusCode = StatusCodes.Good;
+                                        childVariable.Timestamp = DateTime.UtcNow;
+
+                                        // notifies any monitored items that the value has changed.
+                                        childVariable.ClearChangeMasks(SystemContext, false);
+                                    }
+                                    break;
+                                }
+                            }
+                            startOfBadData = true;
+                        }
+                    }
+
+                    collection.Add(new DataValue(variant, valueStatus, workingTime, workingTime));
+                    workingTime = workingTime.AddMilliseconds(millisecondInterval);
+                }
+
+                if (collection.Count > 0)
+                {
+                    PrintCollection("Data Creation", nodeIdString, collection);
+                    Data.Add(nodeIdString, collection);
+                }
+            }
+
+            return collection;
+        }
+
+        private DataValueCollection Get7773CustomerData(BaseVariableState nodeState)
+        {
+            DataValueCollection collection = null;
+
+            string nodeIdString = nodeState.NodeId.ToString();
+
+            if (!Data.TryGetValue(nodeIdString, out collection))
+            {
+                collection = new DataValueCollection();
+
+                uint dataTypeId = (uint)nodeState.DataType.Identifier;
+
+                // Read the data from file, and insert it.
+                List<string> lines = new MyIo().ReadFile("./Aggregates/HistorianInteger2.txt");
+
+                bool startOfBadData = false;
+
+                foreach ( string line in lines )
+                {
+                    string[] parts = line.Split(',');
+
+                    if (parts.Length >= 6)
+                    {
+                        DateTime time = DateTime.Parse(parts[0]).ToUniversalTime();
+                        //parseTime.Kind = DateTimeKind.Utc;
+                        
+                        //DateTime time = parseTime.ToUniversalTime();
+
+                        string status = parts[2];
+                        StatusCode statusCode = new StatusCode(StatusCodes.Good);
+                        if (status.Contains("Bad"))
+                        {
+                            // Bad does have a value.  Keep it in
+                            statusCode = new StatusCode(StatusCodes.Bad);
+                            if ( !startOfBadData )
+                            {
+                                List<BaseInstanceState> children = new List<BaseInstanceState>();
+
+                                nodeState.GetChildren(SystemContext, children);
+                                foreach (BaseInstanceState child in children)
+                                {
+                                    if (child.SymbolicName.Equals("StartOfBadData"))
+                                    {
+                                        BaseDataVariableState childVariable = child as BaseDataVariableState;
+                                        if (childVariable != null)
+                                        {
+                                            Utils.LogInfo("Creating bad Data for {0} as {1}",
+                                                nodeIdString, FormatDateTime(time));
+                                            childVariable.Value = new Variant(time);
+                                            childVariable.StatusCode = StatusCodes.Good;
+                                            childVariable.Timestamp = DateTime.UtcNow;
+
+                                            // notifies any monitored items that the value has changed.
+                                            childVariable.ClearChangeMasks(SystemContext, false);
+                                        }
+                                        break;
+                                    }
+                                }
+                                startOfBadData = true;
+                            }
+                        }
+                        else if (status.Contains("Uncertain"))
+                        {
+                            statusCode = new StatusCode(StatusCodes.Uncertain);
+                        }
+
+                        Variant variant = new Variant();
+
+                        if (parts[3].Contains("Raw"))
+                        {
+                            if (Int32.TryParse(parts[5], out Int32 value))
+                            {
+                                variant = new Variant(value);
+                            }
+                            else
+                            {
+                                bool unexpected = true;
+                            }
+                        }
+                        else
+                        {
+                            if ( parts.Length >= 7 )
+                            {
+                                DateTime annotationTime = DateTime.Parse(parts[4]).ToUniversalTime();
+                                string message = "";
+                                for (int index = 6; index < parts.Length; index++)
+                                {
+                                    message += parts[index];
+                                    if (index < parts.Length - 1)
+                                    {
+                                        message += ",";
+                                    }
+                                }
+
+                                Annotation annotation = new Annotation();
+                                annotation.AnnotationTime = annotationTime;
+                                annotation.UserName = parts[5];
+                                annotation.Message = message;
+
+                                ExtensionObject extensionObject = new ExtensionObject(
+                                    Opc.Ua.DataTypeIds.Annotation, annotation);
+                                variant = new Variant( extensionObject );
+                            }
+                            else
+                            {
+                                bool unexpected = true;
+                            }
+                        }
+
+                        collection.Add(new DataValue(variant, statusCode, time, time));
+                    }
+                }
+
+                if (collection.Count > 0)
+                {
+                    PrintCollection("Data Creation", nodeIdString, collection);
+                    Data.Add(nodeIdString, collection);
+                }
+            }
+
+            return collection;
+        }
+
         private Variant GetVariant(uint dataTypeId, int seed, int index, MultipleInstanceId whichOne)
         {
             Variant variant = new Variant();
@@ -2289,6 +2970,34 @@ namespace Aggregates
 
                     break;
                 }
+            }
+
+            return variant;
+        }
+
+        private Variant GetSineVariant( uint dataTypeId, double seed, int index )
+        {
+            Variant variant = new Variant();
+
+            double twoPi = Math.PI * 2;
+            int maxValue = 100;
+
+            double normalSpan = maxValue;
+            double amplitude = normalSpan / 2;
+
+            double period = twoPi / 15;
+
+            double calculated = (amplitude * Math.Sin(period * (index))) + seed;
+
+            int intCalc = (int)calculated;
+
+            if ( dataTypeId.Equals( Opc.Ua.DataTypes.Int32 ) )
+            {
+                variant = intCalc;
+            }
+            else
+            {
+                variant = calculated;
             }
 
             return variant;
@@ -2461,8 +3170,13 @@ namespace Aggregates
         //private int QuoteTwoIndex = 0;
         //private int QuoteThreeIndex = 0;
 
+        HistoricalDataConfigurationState DefaultConfig = null;
+        HistoricalDataConfigurationState AlternateConfig = null;
+        BaseDataVariableState ConfigurationStatus = null;
+
 
         private const int NUMBER_OF_VALUES_TO_ADD = 1000;
+        private const int MINIMAL_NUMBER_OF_VALUES_TO_ADD = 200;
 
         #endregion
 

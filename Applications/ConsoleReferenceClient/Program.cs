@@ -72,8 +72,8 @@ namespace Quickstarts.ConsoleReferenceClient
             bool logConsole = false;
             bool appLog = false;
             bool renewCertificate = false;
-            bool loadTypes = false;
-            bool browseall = false;
+            bool loadTypes = true;
+            bool browseall = true;
             bool fetchall = false;
             bool jsonvalues = false;
             bool verbose = false;
@@ -233,6 +233,16 @@ namespace Quickstarts.ConsoleReferenceClient
                                     variableIds = new NodeIdCollection(referenceDescriptions
                                         .Where(r => r.NodeClass == NodeClass.Variable && r.TypeDefinition.NamespaceIndex != 0)
                                         .Select(r => ExpandedNodeId.ToNodeId(r.NodeId, uaClient.Session.NamespaceUris)));
+                                }
+
+                                ReferenceDescriptionCollection archieIsolate = new ReferenceDescriptionCollection();
+
+                                foreach( ReferenceDescription referenceDescription in referenceDescriptions)
+                                {
+                                    if (referenceDescription.NodeId.NamespaceIndex == 9 )
+                                    {
+                                        archieIsolate.Add(referenceDescription);
+                                    }
                                 }
 
                                 IList<INode> allNodes = null;

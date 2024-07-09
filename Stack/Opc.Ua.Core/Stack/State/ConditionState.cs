@@ -417,6 +417,12 @@ namespace Opc.Ua
                 {
                     InstanceStateSnapshot snapshot = new InstanceStateSnapshot();
                     snapshot.Initialize(context, this);
+
+                    Utils.Log(Microsoft.Extensions.Logging.LogLevel.Warning,
+                        String.Format("ConditionState Reporting State Change [{0}] at [{1}]",
+                        this.EventId.Value.ToString(),
+                        this.Time.Value.ToString()));
+
                     ReportEvent(context, snapshot);
                 }
             }

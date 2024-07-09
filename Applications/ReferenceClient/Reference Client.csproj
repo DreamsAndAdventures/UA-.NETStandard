@@ -141,6 +141,11 @@
       <Name>Opc.Ua.Configuration</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="BouncyCastle.Cryptography">
+      <Version>2.4.0</Version>
+    </PackageReference>
+  </ItemGroup>
   <PropertyGroup>
     <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
     <BaseNuGetRuntimeIdentifier>win7-x64</BaseNuGetRuntimeIdentifier>
