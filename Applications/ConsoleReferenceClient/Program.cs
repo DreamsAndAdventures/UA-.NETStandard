@@ -366,7 +366,8 @@ namespace Quickstarts.ConsoleReferenceClient
                                 output.WriteLine("Waiting...");
 
                                 // Wait for some DataChange notifications from MonitoredItems
-                                quit = quitEvent.WaitOne(timeout > 0 ? waitTime : 30_000);
+                                // Archie Changing for Durable Investigation
+                                quit = quitEvent.WaitOne(timeout > 0 ? waitTime : 300_000);
                             }
 
                             output.WriteLine("Client disconnected.");

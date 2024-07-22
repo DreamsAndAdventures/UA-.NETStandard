@@ -308,7 +308,7 @@ namespace Quickstarts
                 Subscription subscription = new Subscription(session.DefaultSubscription) {
                     DisplayName = "Console ReferenceClient Subscription",
                     PublishingEnabled = true,
-                    PublishingInterval = 1000,
+                    PublishingInterval = 30000,
                     LifetimeCount = 0,
                     MinLifetimeInterval = minLifeTime,
                 };
@@ -319,6 +319,17 @@ namespace Quickstarts
                 subscription.Create();
                 m_output.WriteLine("New Subscription created with SubscriptionId = {0}.", subscription.Id);
 
+                // Set the subscription to durable
+                uint revisedLifetimeInHours = 0;
+                if (subscription.SetSubscriptionDurable(1, out revisedLifetimeInHours))
+                {
+                    m_output.WriteLine("Subscription {0} is now durable.", subscription.Id);
+                }
+                else
+                {
+                    m_output.WriteLine("Subscription {0} failed durable call", subscription.Id);
+                }
+
                 // Create MonitoredItems for data changes (Reference Server)
 
                 MonitoredItem intMonitoredItem = new MonitoredItem(subscription.DefaultItem);
@@ -327,7 +338,7 @@ namespace Quickstarts
                 intMonitoredItem.AttributeId = Attributes.Value;
                 intMonitoredItem.DisplayName = "Int32 Variable";
                 intMonitoredItem.SamplingInterval = 1000;
-                intMonitoredItem.QueueSize = 10;
+                intMonitoredItem.QueueSize = 60;
                 intMonitoredItem.DiscardOldest = true;
                 intMonitoredItem.Notification += OnMonitoredItemNotification;
 
@@ -339,7 +350,7 @@ namespace Quickstarts
                 floatMonitoredItem.AttributeId = Attributes.Value;
                 floatMonitoredItem.DisplayName = "Float Variable";
                 floatMonitoredItem.SamplingInterval = 1000;
-                floatMonitoredItem.QueueSize = 10;
+                floatMonitoredItem.QueueSize = 60;
                 floatMonitoredItem.Notification += OnMonitoredItemNotification;
 
                 subscription.AddItem(floatMonitoredItem);
@@ -350,13 +361,19 @@ namespace Quickstarts
                 stringMonitoredItem.AttributeId = Attributes.Value;
                 stringMonitoredItem.DisplayName = "String Variable";
                 stringMonitoredItem.SamplingInterval = 1000;
-                stringMonitoredItem.QueueSize = 10;
+                stringMonitoredItem.QueueSize = 60;
                 stringMonitoredItem.Notification += OnMonitoredItemNotification;
 
                 subscription.AddItem(stringMonitoredItem);
 
                 // Create the monitored items on Server side
                 subscription.ApplyChanges();
+
+                if ( subscription.GetMonitoredItems(out UInt32Collection serverHandles, out UInt32Collection clientHandles ) )
+                {
+                    m_output.WriteLine("GetMonitoredItems {0}.{1}", serverHandles.Count, clientHandles.Count);
+                }
+
                 m_output.WriteLine("MonitoredItems created for SubscriptionId = {0}.", subscription.Id);
             }
             catch (Exception ex)
