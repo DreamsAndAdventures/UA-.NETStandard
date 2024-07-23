@@ -27,6 +27,9 @@
  * http://opcfoundation.org/License/MIT/1.00/
  * ======================================================================*/
 
+//#define Use_Demo_Server
+#define Use_Reference_Server
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -304,6 +307,19 @@ namespace Quickstarts
             {
                 // Create a subscription for receiving data change notifications
 
+#if Use_Reference_Server
+                string intNodeIdString = "ns=2;s=Scalar_Simulation_Int32";
+                string floatNodeIdString = "ns=2;s=Scalar_Simulation_Float";
+                string stringNodeIdString = "ns=2;s=Scalar_Simulation_String";
+#else
+                string intNodeIdString = "ns=3;s=Demo.Dynamic.Scalar.Int32";
+                string floatNodeIdString = "ns=3;s=Demo.Dynamic.Scalar.Float";
+                string stringNodeIdString = "ns=3;s=Demo.Dynamic.Scalar.String";
+#endif
+
+                // Create a subscription for receiving data change notifications
+
+
                 // Define Subscription parameters
                 Subscription subscription = new Subscription(session.DefaultSubscription) {
                     DisplayName = "Console ReferenceClient Subscription",
@@ -311,6 +327,7 @@ namespace Quickstarts
                     PublishingInterval = 30000,
                     LifetimeCount = 0,
                     MinLifetimeInterval = minLifeTime,
+                    RepublishAfterTransfer = true
                 };
 
                 session.AddSubscription(subscription);
@@ -334,11 +351,11 @@ namespace Quickstarts
 
                 MonitoredItem intMonitoredItem = new MonitoredItem(subscription.DefaultItem);
                 // Int32 Node - Objects\CTT\Scalar\Simulation\Int32
-                intMonitoredItem.StartNodeId = new NodeId("ns=2;s=Scalar_Simulation_Int32");
+                intMonitoredItem.StartNodeId = new NodeId(intNodeIdString);
                 intMonitoredItem.AttributeId = Attributes.Value;
                 intMonitoredItem.DisplayName = "Int32 Variable";
                 intMonitoredItem.SamplingInterval = 1000;
-                intMonitoredItem.QueueSize = 60;
+                intMonitoredItem.QueueSize = 600;
                 intMonitoredItem.DiscardOldest = true;
                 intMonitoredItem.Notification += OnMonitoredItemNotification;
 
@@ -346,22 +363,22 @@ namespace Quickstarts
 
                 MonitoredItem floatMonitoredItem = new MonitoredItem(subscription.DefaultItem);
                 // Float Node - Objects\CTT\Scalar\Simulation\Float
-                floatMonitoredItem.StartNodeId = new NodeId("ns=2;s=Scalar_Simulation_Float");
+                floatMonitoredItem.StartNodeId = new NodeId(floatNodeIdString);
                 floatMonitoredItem.AttributeId = Attributes.Value;
                 floatMonitoredItem.DisplayName = "Float Variable";
                 floatMonitoredItem.SamplingInterval = 1000;
-                floatMonitoredItem.QueueSize = 60;
+                floatMonitoredItem.QueueSize = 600;
                 floatMonitoredItem.Notification += OnMonitoredItemNotification;
 
                 subscription.AddItem(floatMonitoredItem);
 
                 MonitoredItem stringMonitoredItem = new MonitoredItem(subscription.DefaultItem);
                 // String Node - Objects\CTT\Scalar\Simulation\String
-                stringMonitoredItem.StartNodeId = new NodeId("ns=2;s=Scalar_Simulation_String");
+                stringMonitoredItem.StartNodeId = new NodeId(stringNodeIdString);
                 stringMonitoredItem.AttributeId = Attributes.Value;
                 stringMonitoredItem.DisplayName = "String Variable";
                 stringMonitoredItem.SamplingInterval = 1000;
-                stringMonitoredItem.QueueSize = 60;
+                stringMonitoredItem.QueueSize = 600;
                 stringMonitoredItem.Notification += OnMonitoredItemNotification;
 
                 subscription.AddItem(stringMonitoredItem);
@@ -1029,7 +1046,11 @@ namespace Quickstarts
             {
                 // Log MonitoredItem Notification event
                 MonitoredItemNotification notification = e.NotificationValue as MonitoredItemNotification;
-                m_output.WriteLine("Notification: {0} \"{1}\" and Value = {2}.", notification.Message.SequenceNumber, monitoredItem.ResolvedNodeId, notification.Value);
+                m_output.WriteLine("Notification: {0} \"{1}\" and Value = {2} [{3}]",
+                    notification.Message.SequenceNumber,
+                    monitoredItem.ResolvedNodeId,
+                    notification.Value,
+                    notification.Value.SourceTimestamp.ToLongTimeString());
             }
             catch (Exception ex)
             {

@@ -357,17 +357,61 @@ namespace Quickstarts.ConsoleReferenceClient
                             else
                             {
                                 // Run tests for available methods on reference server.
-                                samples.ReadNodes(uaClient.Session);
-                                samples.WriteNodes(uaClient.Session);
+                                //samples.ReadNodes(uaClient.Session);
+                                //samples.WriteNodes(uaClient.Session);
                                 samples.Browse(uaClient.Session);
-                                samples.CallMethod(uaClient.Session);
+                                //samples.CallMethod(uaClient.Session);
                                 samples.SubscribeToDataChanges(uaClient.Session, 120_000);
 
                                 output.WriteLine("Waiting...");
 
-                                // Wait for some DataChange notifications from MonitoredItems
-                                // Archie Changing for Durable Investigation
-                                quit = quitEvent.WaitOne(timeout > 0 ? waitTime : 300_000);
+                                // Close Sessions for planned communication interruptions
+                                // Get One Publish
+                                // Close Session time 
+
+                                int waitCounters = 0;
+                                int closeSessionTime = uaClient.ReconnectPeriod * 35;
+                                int restartSessionTime = uaClient.ReconnectPeriod * 65;
+                                int desiredWaitTime = 300_000;
+                                List<MonitoredItem> currentItems = null;
+                                ISession previousSession = null;
+                                Subscription previousSubscription = null;
+                                SubscriptionCollection subscriptions = null;
+                                while (!quit && waitCounters < desiredWaitTime)
+                                {
+                                    quit = quitEvent.WaitOne(uaClient.ReconnectPeriod);
+                                    waitCounters += uaClient.ReconnectPeriod;
+                                    output.WriteLine("Archie Waiting " + waitCounters.ToString());
+                                    if ( waitCounters == closeSessionTime)
+                                    {
+                                        previousSession = uaClient.Session;
+                                        subscriptions = new SubscriptionCollection(uaClient.Session.Subscriptions);
+                                        if ( uaClient.Session.SubscriptionCount == 1 )
+                                        {
+                                            previousSubscription = uaClient.Session.Subscriptions.ElementAt(0);
+                                            currentItems = previousSubscription.MonitoredItems.ToList<MonitoredItem>();
+                                            output.WriteLine("Closing Session at " + DateTime.Now.ToLongTimeString());
+                                            uaClient.Session.Close(closeChannel: false);
+//                                            uaClient.Disconnect(leaveChannelOpen: true);
+                                        }
+                                    }
+
+                                    if ( waitCounters == restartSessionTime)
+                                    {
+                                        output.WriteLine("Restarting Session at " + DateTime.Now.ToLongTimeString());
+                                        if (subscriptions != null )
+                                        {
+                                            await uaClient.ReconnectAndTransfer(subscriptions,
+                                                serverUrl.ToString(), useSecurity: !noSecurity,
+                                                quitCTS.Token );
+                                        }
+                                    }
+
+                                }
+
+                                    // Wait for some DataChange notifications from MonitoredItems
+                                    // Archie Changing for Durable Investigation
+                                    //quit = quitEvent.WaitOne(timeout > 0 ? waitTime : 300_000);
                             }
 
                             output.WriteLine("Client disconnected.");
