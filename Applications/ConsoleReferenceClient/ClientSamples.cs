@@ -43,6 +43,8 @@ using Opc.Ua;
 using Opc.Ua.Client;
 using Opc.Ua.Client.ComplexTypes;
 
+using Quickstarts.ConsoleReferenceClient;
+
 namespace Quickstarts
 {
     /// <summary>
@@ -161,7 +163,7 @@ namespace Quickstarts
 
                 // Int32 Node - Objects\CTT\Scalar\Scalar_Static\Int32
                 WriteValue intWriteVal = new WriteValue();
-                intWriteVal.NodeId = new NodeId("ns=2;s=Scalar_Static_Int32");
+                intWriteVal.NodeId = ServerSelector.intWriteValueNodeId;
                 intWriteVal.AttributeId = Attributes.Value;
                 intWriteVal.Value = new DataValue();
                 intWriteVal.Value.Value = (int)100;
@@ -169,7 +171,7 @@ namespace Quickstarts
 
                 // Float Node - Objects\CTT\Scalar\Scalar_Static\Float
                 WriteValue floatWriteVal = new WriteValue();
-                floatWriteVal.NodeId = new NodeId("ns=2;s=Scalar_Static_Float");
+                floatWriteVal.NodeId = ServerSelector.floatWriteValueNodeId;
                 floatWriteVal.AttributeId = Attributes.Value;
                 floatWriteVal.Value = new DataValue();
                 floatWriteVal.Value.Value = (float)100.5;
@@ -177,7 +179,7 @@ namespace Quickstarts
 
                 // String Node - Objects\CTT\Scalar\Scalar_Static\String
                 WriteValue stringWriteVal = new WriteValue();
-                stringWriteVal.NodeId = new NodeId("ns=2;s=Scalar_Static_String");
+                stringWriteVal.NodeId = ServerSelector.stringWriteValueNodeId;
                 stringWriteVal.AttributeId = Attributes.Value;
                 stringWriteVal.Value = new DataValue();
                 stringWriteVal.Value.Value = "String Test";
@@ -271,12 +273,12 @@ namespace Quickstarts
                 // Define the UA Method to call
                 // Parent node - Objects\CTT\Methods
                 // Method node - Objects\CTT\Methods\Add
-                NodeId objectId = new NodeId("ns=2;s=Methods");
-                NodeId methodId = new NodeId("ns=2;s=Methods_Add");
+                NodeId objectId = ServerSelector.methodObjectIdNodeId;
+                NodeId methodId = ServerSelector.methodMethodIdNodeId;
 
                 // Define the method parameters
                 // Input argument requires a Float and an UInt32 value
-                object[] inputArguments = new object[] { (float)10.5, (uint)10 };
+                object[] inputArguments = ServerSelector.GetMethodInputArguments();
                 IList<object> outputArguments = null;
 
                 // Invoke Call service
@@ -313,12 +315,12 @@ namespace Quickstarts
                 // Define the UA Method to call
                 // Parent node - Objects\CTT\Alarms
                 // Method node - Objects\CTT\Alarms\Start
-                NodeId objectId = new NodeId("ns=7;s=Alarms");
-                NodeId methodId = new NodeId("ns=7;s=Alarms.Start");
+                NodeId objectId = ServerSelector.enableEventObjectIdNodeId;
+                NodeId methodId = ServerSelector.enableEventMethodIdNodeId;
 
                 // Define the method parameters
                 // Input argument requires a Float and an UInt32 value
-                object[] inputArguments = new object[] { timeToRun };
+                object[] inputArguments = ServerSelector.GetStartEventInputArguments(timeToRun);
                 IList<object> outputArguments = null;
 
                 // Invoke Call service
@@ -397,7 +399,7 @@ namespace Quickstarts
 
                 MonitoredItem intMonitoredItem = new MonitoredItem(subscription.DefaultItem);
                 // Int32 Node - Objects\CTT\Scalar\Simulation\Int32
-                intMonitoredItem.StartNodeId = new NodeId("ns=2;s=Scalar_Simulation_Int32");
+                intMonitoredItem.StartNodeId = ServerSelector.intMoniteredNodeId;
                 intMonitoredItem.AttributeId = Attributes.Value;
                 intMonitoredItem.DisplayName = "Int32 Variable";
                 intMonitoredItem.SamplingInterval = itemSamplingInterval;
@@ -409,7 +411,7 @@ namespace Quickstarts
 
                 MonitoredItem floatMonitoredItem = new MonitoredItem(subscription.DefaultItem);
                 // Float Node - Objects\CTT\Scalar\Simulation\Float
-                floatMonitoredItem.StartNodeId = new NodeId("ns=2;s=Scalar_Simulation_Float");
+                floatMonitoredItem.StartNodeId = ServerSelector.floatMonitoredNodeId;
                 floatMonitoredItem.AttributeId = Attributes.Value;
                 floatMonitoredItem.DisplayName = "Float Variable";
                 floatMonitoredItem.SamplingInterval = itemSamplingInterval;
@@ -420,7 +422,7 @@ namespace Quickstarts
 
                 MonitoredItem stringMonitoredItem = new MonitoredItem(subscription.DefaultItem);
                 // String Node - Objects\CTT\Scalar\Simulation\String
-                stringMonitoredItem.StartNodeId = new NodeId("ns=2;s=Scalar_Simulation_String");
+                stringMonitoredItem.StartNodeId = ServerSelector.stringMonitoredNodeId;
                 stringMonitoredItem.AttributeId = Attributes.Value;
                 stringMonitoredItem.DisplayName = "String Variable";
                 stringMonitoredItem.SamplingInterval = itemSamplingInterval;
@@ -451,19 +453,22 @@ namespace Quickstarts
                 }
                 filter.SelectClauses = simpleAttributeOperands;
 
-                ContentFilter whereClause = new ContentFilter();
-                SimpleAttributeOperand existingEventType = new SimpleAttributeOperand() {
-                    AttributeId = Attributes.Value,
-                    TypeDefinitionId = ObjectTypeIds.ExclusiveLevelAlarmType,
-                    BrowsePath = new QualifiedNameCollection( new QualifiedName[] {"EventType"} )
-                };
-                LiteralOperand desiredEventType = new LiteralOperand();
-                desiredEventType.Value = new Variant(new NodeId(Opc.Ua.ObjectTypeIds.ExclusiveLevelAlarmType));
+                if (ServerSelector.FilterEvents)
+                {
+                    ContentFilter whereClause = new ContentFilter();
+                    SimpleAttributeOperand existingEventType = new SimpleAttributeOperand() {
+                        AttributeId = Attributes.Value,
+                        TypeDefinitionId = ObjectTypeIds.ExclusiveLevelAlarmType,
+                        BrowsePath = new QualifiedNameCollection(new QualifiedName[] { "EventType" })
+                    };
+                    LiteralOperand desiredEventType = new LiteralOperand();
+                    desiredEventType.Value = new Variant(new NodeId(Opc.Ua.ObjectTypeIds.ExclusiveLevelAlarmType));
 
-              
-                whereClause.Push(FilterOperator.Equals, new FilterOperand[] { existingEventType, desiredEventType });
 
-                filter.WhereClause = whereClause;
+                    whereClause.Push(FilterOperator.Equals, new FilterOperand[] { existingEventType, desiredEventType });
+
+                    filter.WhereClause = whereClause;
+                }
 
                 eventMonitoredItem.Filter = filter;
                 eventMonitoredItem.NodeClass = NodeClass.Object;
