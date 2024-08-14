@@ -22,6 +22,7 @@
   
   <ItemGroup>
     <Compile Include="..\..\Applications\ConsoleReferenceClient\ClientSamples.cs" Link="Links\ClientSamples.cs" />
+    <Compile Include="..\..\Applications\ConsoleReferenceClient\ServerSelector.cs" Link="Links\ServerSelector.cs" />
     <Compile Include="..\Common\Main.cs" />
   </ItemGroup>
 
