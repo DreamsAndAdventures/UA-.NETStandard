@@ -144,6 +144,44 @@ namespace Quickstarts
         }
 
         /// <summary>
+        /// Read a list of nodes from Server
+        /// </summary>
+        public void ReadAttributes(ISession session)
+        {
+            if (session == null || session.Connected == false)
+            {
+                m_output.WriteLine("Session not connected!");
+                return;
+            }
+
+            try
+            {
+                #region Read a node by calling the Read Service
+
+                NodeId myNodeId = new NodeId("ns=2;s=CTT");
+
+                Node result = session.ReadNode( myNodeId, NodeClass.Object, optionalAttributes: true );
+
+                Debug.WriteLine("Gonna wait");
+                #endregion
+
+                #region Read the Value attribute of a node by calling the Session.ReadValue method
+                //// Read Server NamespaceArray
+                //m_output.WriteLine("Reading Value of NamespaceArray node...");
+                //DataValue namespaceArray = session.ReadValue(Variables.Server_NamespaceArray);
+                //// Display the result
+                //m_output.WriteLine($"NamespaceArray Value = {namespaceArray}");
+                #endregion
+            }
+            catch (Exception ex)
+            {
+                // Log Error
+                m_output.WriteLine($"Read Nodes Error : {ex.Message}.");
+            }
+        }
+
+
+        /// <summary>
         /// Write a list of nodes to the Server.
         /// </summary>
         public void WriteNodes(ISession session)

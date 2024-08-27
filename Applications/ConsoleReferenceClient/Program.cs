@@ -388,6 +388,7 @@ namespace Quickstarts.ConsoleReferenceClient
                                 }
 
                                 // Run tests for available methods on reference server.
+                                samples.ReadAttributes(uaClient.Session);
                                 samples.ReadNodes(uaClient.Session);
                                 samples.WriteNodes(uaClient.Session);
                                 samples.Browse(uaClient.Session);

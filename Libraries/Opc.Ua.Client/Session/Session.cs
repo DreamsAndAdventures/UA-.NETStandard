@@ -4409,7 +4409,13 @@ namespace Opc.Ua.Client
                         throw ServiceResultException.Create(StatusCodes.BadUnexpectedError, "Object does not support the EventNotifier attribute.");
                     }
 
-                    objectNode.EventNotifier = (byte)value.GetValue(typeof(byte));
+                    object myValue = value.GetValue(typeof(byte));
+
+                    if (myValue != null)
+                    {
+                        objectNode.EventNotifier = (byte)myValue;
+                    }
+
                     node = objectNode;
                     break;
                 }
