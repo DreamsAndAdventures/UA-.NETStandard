@@ -1022,7 +1022,7 @@ namespace Opc.Ua.Client.Tests
             }
 
             var clientTestServices = new ClientTestServices(session);
-            ReferenceDescriptions = CommonTestWorkers.BrowseFullAddressSpaceWorker(clientTestServices, requestHeader, operationLimits ? OperationLimits : null);
+            ReferenceDescriptions = CommonTestWorkers.BrowseFullAddressSpaceWorker(clientTestServices, requestHeader, operationLimits ? OperationLimits : null, outputResult: true);
 
             if (securityPolicy != null)
             {
@@ -1575,13 +1575,13 @@ namespace Opc.Ua.Client.Tests
 
             Subscription subscription = MockOutSubscriptionSession(sessionMock);
 
-            if ( subscription.SetSubscriptionDurable(1, out uint revised) )
+            if (subscription.SetSubscriptionDurable(1, out uint revised))
             {
                 Assert.AreEqual(expectedRevised, revised);
             }
             else
             {
-                Assert.Fail( "Unexpected Error in SetSubscriptionDurable" );
+                Assert.Fail("Unexpected Error in SetSubscriptionDurable");
             }
         }
 
@@ -1810,6 +1810,7 @@ namespace Opc.Ua.Client.Tests
                 out UInt32Collection clientHandles));
         }
 
+
         #endregion
 
         #region Benchmarks
@@ -1833,7 +1834,7 @@ namespace Opc.Ua.Client.Tests
             }
         }
 
-        private Subscription MockOutSubscriptionSession( Moq.Mock<ISession> sessionMock )
+        private Subscription MockOutSubscriptionSession(Moq.Mock<ISession> sessionMock)
         {
             Subscription subscription = new Subscription();
             Type subscriptionType = subscription.GetType();
