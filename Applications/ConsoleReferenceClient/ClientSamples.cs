@@ -344,12 +344,14 @@ namespace Quickstarts
         /// <summary>
         /// Create Subscription and MonitoredItems for DataChanges
         /// </summary>
-        public void SubscribeToDataChanges(ISession session, uint minLifeTime, bool enableDurableSubscriptions)
+        public bool SubscribeToDataChanges(ISession session, uint minLifeTime, bool enableDurableSubscriptions)
         {
+            bool isDurable = false;
+
             if (session == null || session.Connected == false)
             {
                 m_output.WriteLine("Session not connected!");
-                return;
+                return isDurable;
             }
 
             try
@@ -387,6 +389,8 @@ namespace Quickstarts
 
                     if (subscription.SetSubscriptionDurable(1, out revisedLifetimeInHours))
                     {
+                        isDurable = true;
+
                         m_output.WriteLine("Subscription {0} is now durable, Revised Lifetime {1} in hours.",
                             subscription.Id, revisedLifetimeInHours);
                     }
@@ -482,6 +486,8 @@ namespace Quickstarts
             {
                 m_output.WriteLine("Subscribe error: {0}", ex.Message);
             }
+
+            return isDurable;
         }
         #endregion
 
