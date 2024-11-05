@@ -118,7 +118,7 @@ namespace Quickstarts.ReferenceServer
                 }
 
                 // setup the logging
-                ConsoleUtils.ConfigureLogging(server.Configuration, applicationName, logConsole, LogLevel.Information);
+                ConsoleUtils.ConfigureLogging(server.Configuration, applicationName, logConsole, LogLevel.Error);
 
                 // check or renew the certificate
                 output.WriteLine("Check the certificate.");

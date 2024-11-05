@@ -386,7 +386,8 @@ namespace Quickstarts.ConsoleReferenceClient
                             }
                             else
                             {
-                                int quitTimeout = 65_000;
+                                int quitTimeout = 65_000;   // 65 seconds
+                                quitTimeout = 3_600_000;    // One Hour
                                 if (enableDurableSubscriptions)
                                 {
                                     quitTimeout = 150_000;
@@ -399,7 +400,7 @@ namespace Quickstarts.ConsoleReferenceClient
                                 samples.WriteNodes(uaClient.Session);
                                 samples.Browse(uaClient.Session);
                                 samples.CallMethod(uaClient.Session);
-                                samples.EnableEvents(uaClient.Session, (uint)quitTimeout);
+                                //samples.EnableEvents(uaClient.Session, (uint)quitTimeout);
                                 samples.SubscribeToDataChanges(
                                     uaClient.Session, 60_000, enableDurableSubscriptions);
 

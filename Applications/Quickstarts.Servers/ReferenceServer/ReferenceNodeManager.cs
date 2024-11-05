@@ -381,7 +381,7 @@ namespace Quickstarts.ReferenceServer
                     variables.AddRange(CreateVariables(massFolder, staticMass + "Byte", "Byte", DataTypeIds.Byte, ValueRanks.Scalar, 100));
                     variables.AddRange(CreateVariables(massFolder, staticMass + "ByteString", "ByteString", DataTypeIds.ByteString, ValueRanks.Scalar, 100));
                     variables.AddRange(CreateVariables(massFolder, staticMass + "DateTime", "DateTime", DataTypeIds.DateTime, ValueRanks.Scalar, 100));
-                    variables.AddRange(CreateVariables(massFolder, staticMass + "Double", "Double", DataTypeIds.Double, ValueRanks.Scalar, 100));
+                    variables.AddRange(CreateVariables(massFolder, staticMass + "Double", "Double", DataTypeIds.Double, ValueRanks.Scalar, 5000));
                     variables.AddRange(CreateVariables(massFolder, staticMass + "Duration", "Duration", DataTypeIds.Duration, ValueRanks.Scalar, 100));
                     variables.AddRange(CreateVariables(massFolder, staticMass + "Float", "Float", DataTypeIds.Float, ValueRanks.Scalar, 100));
                     variables.AddRange(CreateVariables(massFolder, staticMass + "Guid", "Guid", DataTypeIds.Guid, ValueRanks.Scalar, 100));
@@ -483,7 +483,7 @@ namespace Quickstarts.ReferenceServer
                     CreateDynamicVariables(massSimulationFolder, massSimulation + "Byte", "Byte", DataTypeIds.Byte, ValueRanks.Scalar, 100);
                     CreateDynamicVariables(massSimulationFolder, massSimulation + "ByteString", "ByteString", DataTypeIds.ByteString, ValueRanks.Scalar, 100);
                     CreateDynamicVariables(massSimulationFolder, massSimulation + "DateTime", "DateTime", DataTypeIds.DateTime, ValueRanks.Scalar, 100);
-                    CreateDynamicVariables(massSimulationFolder, massSimulation + "Double", "Double", DataTypeIds.Double, ValueRanks.Scalar, 100);
+                    CreateDynamicVariables(massSimulationFolder, massSimulation + "Double", "Double", DataTypeIds.Double, ValueRanks.Scalar, 5000);
                     CreateDynamicVariables(massSimulationFolder, massSimulation + "Duration", "Duration", DataTypeIds.Duration, ValueRanks.Scalar, 100);
                     CreateDynamicVariables(massSimulationFolder, massSimulation + "Float", "Float", DataTypeIds.Float, ValueRanks.Scalar, 100);
                     CreateDynamicVariables(massSimulationFolder, massSimulation + "Guid", "Guid", DataTypeIds.Guid, ValueRanks.Scalar, 100);
@@ -2258,7 +2258,7 @@ namespace Quickstarts.ReferenceServer
             // now to create the remaining NUMBERED items
             for (uint i = 0; i < numVariables; i++)
             {
-                string newName = string.Format(CultureInfo.InvariantCulture, "{0}_{1}", name, i.ToString("00", CultureInfo.InvariantCulture));
+                string newName = string.Format(CultureInfo.InvariantCulture, "{0}_{1}", name, i.ToString("0000", CultureInfo.InvariantCulture));
                 string newPath = string.Format(CultureInfo.InvariantCulture, "{0}_{1}", path, newName);
                 itemsCreated.Add(CreateVariable(newParentFolder, newPath, newName, dataType, valueRank));
             }
@@ -2298,7 +2298,7 @@ namespace Quickstarts.ReferenceServer
             // now to create the remaining NUMBERED items
             for (uint i = 0; i < numVariables; i++)
             {
-                string newName = string.Format(CultureInfo.InvariantCulture, "{0}_{1}", name, i.ToString("00", CultureInfo.InvariantCulture));
+                string newName = string.Format(CultureInfo.InvariantCulture, "{0}_{1}", name, i.ToString("0000", CultureInfo.InvariantCulture));
                 string newPath = string.Format(CultureInfo.InvariantCulture, "{0}_{1}", path, newName);
                 itemsCreated.Add(CreateDynamicVariable(newParentFolder, newPath, newName, dataType, valueRank));
             }//for i

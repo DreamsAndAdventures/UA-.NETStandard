@@ -1102,6 +1102,8 @@ namespace Opc.Ua.Server
 
                     if (m_eventQueueHandler.Overflow)
                     {
+                        Utils.LogTrace(Utils.TraceMasks.Error, "MONITORED ITEM: Overflow");
+
                         // construct event.
                         EventQueueOverflowEventState e = new EventQueueOverflowEventState(null);
 

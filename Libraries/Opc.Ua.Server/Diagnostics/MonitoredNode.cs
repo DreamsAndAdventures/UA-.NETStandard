@@ -198,6 +198,7 @@ namespace Opc.Ua.Server
         /// <param name="e">The event.</param>
         public void OnReportEvent(ISystemContext context, NodeState node, IFilterTarget e)
         {
+            DateTime onReportStart = DateTime.UtcNow;
             List<IEventMonitoredItem> eventMonitoredItems = new List<IEventMonitoredItem>();
 
             lock (NodeManager.Lock)
@@ -250,8 +251,16 @@ namespace Opc.Ua.Server
                     continue;
                 }
 
+                DateTime waiting = DateTime.UtcNow;
                 lock (NodeManager.Lock)
                 {
+                    DateTime notWaiting = DateTime.UtcNow;
+                    TimeSpan waitingForLock = notWaiting - waiting;
+                    if ( waitingForLock.TotalSeconds > 3)
+                    {
+                        Utils.LogError("Archie Waiting for lock " + waitingForLock.TotalSeconds.ToString("#.##") + " seconds");
+                    }
+
                     // enqueue event
                     if (context?.SessionId != null && monitoredItem?.Session?.Id?.Identifier != null)
                     {
@@ -266,12 +275,29 @@ namespace Opc.Ua.Server
                     }
                     else
                     {
+                        DateTime queueStart = DateTime.UtcNow;
+
                         monitoredItem?.QueueEvent(e);
+                        DateTime queueEnd = DateTime.UtcNow;
+                        TimeSpan queueTime = queueEnd - queueStart;
+                        if (queueTime.TotalSeconds > 3)
+                        {
+                            Utils.LogError("Archie Waiting for Queue " + queueTime.TotalSeconds.ToString("#.##") + " seconds");
+                        }
                     }
 
                 }
             }
-        }        
+
+            DateTime onReportEnd = DateTime.UtcNow;
+            TimeSpan onReportSpan = onReportEnd - onReportStart;
+            if (onReportSpan.TotalSeconds > 3)
+            {
+                Utils.LogError("Archie On Report Span " + onReportSpan.TotalSeconds.ToString("#.##") + " seconds");
+            }
+
+
+        }
 
         /// <summary>
         /// Called when the state of a Node changes.

@@ -72,11 +72,14 @@ namespace Quickstarts
             m_verbose = verbose;
             m_desiredEventFields = new Dictionary<int, QualifiedNameCollection>();
             int eventIndexCounter = 0;
+            m_timeIndex = eventIndexCounter;
             m_desiredEventFields.Add(eventIndexCounter++, new QualifiedNameCollection(new QualifiedName[] { BrowseNames.Time }));
             m_desiredEventFields.Add(eventIndexCounter++, new QualifiedNameCollection(new QualifiedName[] { BrowseNames.ActiveState }));
             m_desiredEventFields.Add(eventIndexCounter++, new QualifiedNameCollection(new QualifiedName[] { BrowseNames.Message }));
             m_desiredEventFields.Add(eventIndexCounter++, new QualifiedNameCollection(new QualifiedName[] { BrowseNames.LimitState, BrowseNames.CurrentState }));
             m_desiredEventFields.Add(eventIndexCounter++, new QualifiedNameCollection(new QualifiedName[] { BrowseNames.LimitState, BrowseNames.LastTransition }));
+            m_eventTypeIndex = eventIndexCounter;
+            m_desiredEventFields.Add(eventIndexCounter++, new QualifiedNameCollection(new QualifiedName[] { BrowseNames.EventType }));
         }
 
         #region Public Sample Methods
@@ -313,8 +316,8 @@ namespace Quickstarts
                 // Define the UA Method to call
                 // Parent node - Objects\CTT\Alarms
                 // Method node - Objects\CTT\Alarms\Start
-                NodeId objectId = new NodeId("ns=7;s=Alarms");
-                NodeId methodId = new NodeId("ns=7;s=Alarms.Start");
+                NodeId objectId = new NodeId("ns=9;s=Alarms");
+                NodeId methodId = new NodeId("ns=9;s=Alarms.Start");
 
                 // Define the method parameters
                 // Input argument requires a Float and an UInt32 value
@@ -355,9 +358,9 @@ namespace Quickstarts
             try
             {
                 // Create a subscription for receiving data change notifications
-                int subscriptionPublishingInterval = 1000;
-                int itemSamplingInterval = 1000;
-                uint queueSize = 10;
+                int subscriptionPublishingInterval = 100;
+                int itemSamplingInterval = 100;
+                uint queueSize = 5000;
                 uint lifetime = minLifeTime;
 
                 if (enableDurableSubscriptions)
@@ -436,6 +439,21 @@ namespace Quickstarts
 
                 subscription.AddItem(stringMonitoredItem);
 
+                for( int index = 0; index < 5000; index++ )
+                {
+                    MonitoredItem massMonitoredItem = new MonitoredItem(subscription.DefaultItem);
+                    massMonitoredItem.StartNodeId = new NodeId("ns=2;s=Scalar_Simulation_Mass_Double_Double_" +
+                        index.ToString("D4") );
+                    massMonitoredItem.AttributeId = Attributes.Value;
+                    massMonitoredItem.DisplayName = "Mass" + index.ToString("D4"); 
+                    massMonitoredItem.SamplingInterval = itemSamplingInterval;
+                    massMonitoredItem.QueueSize = queueSize;
+                    massMonitoredItem.Notification += OnMonitoredItemNotification;
+                    subscription.AddItem(massMonitoredItem);
+                }
+
+
+
                 MonitoredItem eventMonitoredItem = new MonitoredItem(subscription.DefaultItem);
                 eventMonitoredItem.StartNodeId = new NodeId(Opc.Ua.ObjectIds.Server);
                 eventMonitoredItem.AttributeId = Attributes.EventNotifier;
@@ -443,6 +461,7 @@ namespace Quickstarts
                 eventMonitoredItem.SamplingInterval = itemSamplingInterval;
                 eventMonitoredItem.QueueSize = queueSize;
                 eventMonitoredItem.Notification += OnMonitoredItemEventNotification;
+                m_startTime = DateTime.UtcNow;
 
                 EventFilter filter = new EventFilter();
 
@@ -470,7 +489,7 @@ namespace Quickstarts
 
                 whereClause.Push(FilterOperator.Equals, new FilterOperand[] { existingEventType, desiredEventType });
 
-                filter.WhereClause = whereClause;
+                //filter.WhereClause = whereClause;
 
                 eventMonitoredItem.Filter = filter;
                 eventMonitoredItem.NodeClass = NodeClass.Object;
@@ -1307,79 +1326,134 @@ namespace Quickstarts
         /// </summary>
         private void OnMonitoredItemNotification(MonitoredItem monitoredItem, MonitoredItemNotificationEventArgs e)
         {
-            try
+            m_daCounter++;
+            if ( m_daCounter % m_daIndex == 0)
             {
-                // Log MonitoredItem Notification event
-                MonitoredItemNotification notification = e.NotificationValue as MonitoredItemNotification;
-                DateTime localTime = notification.Value.SourceTimestamp.ToLocalTime();
-                m_output.WriteLine("Notification: {0} \"{1}\" and Value = {2} at [{3}].",
-                    notification.Message.SequenceNumber,
-                    monitoredItem.ResolvedNodeId,
-                    notification.Value,
-                    localTime.ToLongTimeString());
+                DateTime clientTime = DateTime.UtcNow;
+                TimeSpan timeSpan = clientTime - m_startTime;
+
+                double notificationsPerSecond = m_daCounter / timeSpan.TotalSeconds;
+
+                m_output.WriteLine("Total Data = {0}, Per second = {1}", m_daCounter, notificationsPerSecond.ToString("#.##"));
             }
-            catch (Exception ex)
-            {
-                m_output.WriteLine("OnMonitoredItemNotification error: {0}", ex.Message);
-            }
+
+
+            //try
+            //{
+            //    // Log MonitoredItem Notification event
+            //    MonitoredItemNotification notification = e.NotificationValue as MonitoredItemNotification;
+            //    DateTime localTime = notification.Value.SourceTimestamp.ToLocalTime();
+            //    m_output.WriteLine("Notification: {0} \"{1}\" and Value = {2} at [{3}].",
+            //        notification.Message.SequenceNumber,
+            //        monitoredItem.ResolvedNodeId,
+            //        notification.Value,
+            //        localTime.ToLongTimeString());
+            //}
+            //catch (Exception ex)
+            //{
+            //    m_output.WriteLine("OnMonitoredItemNotification error: {0}", ex.Message);
+            //}
         }
 
-        /// <summary>
-        /// Handle Requested Event notifications from Server
-        /// </summary>
-        private void OnMonitoredItemEventNotification(MonitoredItem monitoredItem, MonitoredItemNotificationEventArgs e)
+    /// <summary>
+    /// Handle Requested Event notifications from Server
+    /// </summary>
+    private void OnMonitoredItemEventNotification(MonitoredItem monitoredItem, MonitoredItemNotificationEventArgs e)
         {
             try
             {
-                // Log MonitoredItem Notification event
-                EventFieldList notification = e.NotificationValue as EventFieldList;
+                m_processedEvents++;
+                EventFieldList eventFieldList = e.NotificationValue as EventFieldList;
+                m_eventTypes.Add(eventFieldList.EventFields[m_eventTypeIndex].ToString());
 
-                foreach (KeyValuePair<int, QualifiedNameCollection> entry in m_desiredEventFields)
+                Variant timeOfEvent = eventFieldList.EventFields[m_timeIndex];
+                DateTime eventTime = (DateTime)timeOfEvent.Value;
+                DateTime clientTime = DateTime.UtcNow;
+
+                TimeSpan difference = clientTime - eventTime;
+                if ( difference.TotalSeconds > m_largestTimespan.TotalSeconds )
                 {
-                    Variant field = notification.EventFields[entry.Key];
-                    if (field.TypeInfo.BuiltInType != BuiltInType.Null)
+                    m_largestTimespan = difference;
+                }
+
+
+                if ( m_processedEvents % m_eventCaptureIndex == 0 )
+                {
+                    // Get the time of the event
+                    //m_dateComparison.Add(m_processedEvents, new Tuple<DateTime, DateTime>(eventTime, clientTime));
+                    TimeSpan timeSpan = clientTime - m_startTime;
+
+                    double eventsPerSecond = m_processedEvents / (double)timeSpan.TotalSeconds;
+
+                    m_output.WriteLine("Total events = {0}, Per second = {1}, Differential {2} seconds Elapsed Time {3}, longest timespan {4}",
+                        m_processedEvents.ToString(),
+                        eventsPerSecond.ToString("#.##"),
+                        difference.TotalSeconds.ToString("#.##"),
+                        timeSpan.TotalSeconds.ToString("#.##"),
+                        m_largestTimespan.TotalSeconds.ToString("#.##"));
+
+                    if (m_eventTypes.Count > m_lastEventTypeCount)
                     {
-                        StringBuilder fieldPath = new StringBuilder();
-
-                        int lastIndex = entry.Value.Count - 1;
-                        for (int index = 0; index < entry.Value.Count; index++)
+                        foreach (string eventType in m_eventTypes)
                         {
-                            fieldPath.Append(entry.Value[index].Name);
-                            if (index < lastIndex)
-                            {
-                                fieldPath.Append(".");
-                            }
+                            m_output.WriteLine("\tEvent Type: {0}", eventType);
                         }
-
-                        string fieldName = fieldPath.ToString();
-                        if (fieldName.Equals("Time"))
-                        {
-                            try
-                            {
-                                DateTime currentTime = (DateTime)field.Value;
-                                TimeSpan timeSpan = currentTime - m_lastEventTime;
-                                m_lastEventTime = currentTime;
-                                m_processedEvents++;
-                                string timeBetweenEvents = "";
-                                if (m_processedEvents > 1)
-                                {
-                                    timeBetweenEvents = ", time since last event = " + timeSpan.Seconds.ToString() + " seconds";
-                                }
-
-                                m_output.WriteLine("Event Received - total count = {0}{1}",
-                                    m_processedEvents.ToString(),
-                                    timeBetweenEvents);
-                            }
-                            catch (Exception ex)
-                            {
-                                m_output.WriteLine("Unexpected error retrieving Event Time Field Value: {0}", ex.Message);
-                            }
-                        }
-
-                        m_output.WriteLine("\tField [{0}] \"{1}\" = [{2}]",
-                            entry.Key.ToString(), fieldName, field.Value);
+                        m_lastEventTypeCount = m_eventTypes.Count;
                     }
                 }
+
+
+
+
+                //// Log MonitoredItem Notification event
+                //EventFieldList notification = e.NotificationValue as EventFieldList;
+
+                //foreach (KeyValuePair<int, QualifiedNameCollection> entry in m_desiredEventFields)
+                //{
+                //    Variant field = notification.EventFields[entry.Key];
+                //    if (field.TypeInfo.BuiltInType != BuiltInType.Null)
+                //    {
+                //        StringBuilder fieldPath = new StringBuilder();
+
+                //        int lastIndex = entry.Value.Count - 1;
+                //        for (int index = 0; index < entry.Value.Count; index++)
+                //        {
+                //            fieldPath.Append(entry.Value[index].Name);
+                //            if (index < lastIndex)
+                //            {
+                //                fieldPath.Append(".");
+                //            }
+                //        }
+
+                //        string fieldName = fieldPath.ToString();
+                //        if (fieldName.Equals("Time"))
+                //        {
+                //            try
+                //            {
+                //                DateTime currentTime = (DateTime)field.Value;
+                //                TimeSpan timeSpan = currentTime - m_lastEventTime;
+                //                m_lastEventTime = currentTime;
+                //                m_processedEvents++;
+                //                string timeBetweenEvents = "";
+                //                if (m_processedEvents > 1)
+                //                {
+                //                    timeBetweenEvents = ", time since last event = " + timeSpan.Seconds.ToString() + " seconds";
+                //                }
+
+                //                m_output.WriteLine("Event Received - total count = {0}{1}",
+                //                    m_processedEvents.ToString(),
+                //                    timeBetweenEvents);
+                //            }
+                //            catch (Exception ex)
+                //            {
+                //                m_output.WriteLine("Unexpected error retrieving Event Time Field Value: {0}", ex.Message);
+                //            }
+                //        }
+
+                //        m_output.WriteLine("\tField [{0}] \"{1}\" = [{2}]",
+                //            entry.Key.ToString(), fieldName, field.Value);
+                //    }
+                //}
             }
             catch (Exception ex)
             {
@@ -1451,7 +1525,19 @@ namespace Quickstarts
         private readonly ManualResetEvent m_quitEvent;
         private readonly bool m_verbose;
         private Dictionary<int, QualifiedNameCollection> m_desiredEventFields = null;
+        private int m_timeIndex = 0;
+        private int m_eventTypeIndex = 0;
         private int m_processedEvents = 0;
         private DateTime m_lastEventTime = DateTime.Now;
+
+        private DateTime m_startTime = DateTime.MinValue;
+        Dictionary<long, Tuple<DateTime, DateTime>> m_dateComparison =
+            new Dictionary<long, Tuple<DateTime, DateTime>>();
+        private long m_eventCaptureIndex = 1000;
+        private HashSet<string> m_eventTypes = new HashSet<string>();
+        private int m_lastEventTypeCount = 0;
+        private TimeSpan m_largestTimespan = new TimeSpan();
+        private long m_daCounter = 0;
+        private long m_daIndex = 20000;
     }
 }

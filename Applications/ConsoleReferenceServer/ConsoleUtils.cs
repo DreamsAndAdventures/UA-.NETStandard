@@ -334,7 +334,7 @@ namespace Quickstarts
                         );
             }
 #endif
-            LogLevel fileLevel = LogLevel.Information;
+            LogLevel fileLevel = LogLevel.Error;
 
             // switch for Trace/Verbose output
             var traceMasks = configuration.TraceConfiguration.TraceMasks;
