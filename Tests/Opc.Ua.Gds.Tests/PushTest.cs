@@ -379,16 +379,20 @@ namespace Opc.Ua.Gds.Tests
             }
         }
 
+        [Test, Order(509)]
+        public void UpdateCertificateCASignedRegeneratePrivateKey()
+        {
+            UpdateCertificateCASigned(true);
+        }
+
         [Test, Order(510)]
         public void UpdateCertificateCASigned()
         {
-#if NETCOREAPP3_1_OR_GREATER
-            // this test fails on macOS, ignore
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            {
-                Assert.Ignore("Update CA signed certificate fails on mac OS.");
-            }
-#endif
+            UpdateCertificateCASigned(false);
+        }
+
+        public void UpdateCertificateCASigned(bool regeneratePrivateKey)
+        {
             ConnectPushClient(true);
             ConnectGDSClient(true);
             TestContext.Out.WriteLine("Create Signing Request");
@@ -396,7 +400,7 @@ namespace Opc.Ua.Gds.Tests
                 null,
                 m_pushClient.PushClient.ApplicationCertificateType,
                 null,
-                false,
+                regeneratePrivateKey,
                 null);
             Assert.IsNotNull(csr);
             TestContext.Out.WriteLine("Start Signing Request");
@@ -613,7 +617,7 @@ namespace Opc.Ua.Gds.Tests
             }, Throws.Exception);
 
             m_pushClient.PushClient.GetCertificates(m_pushClient.PushClient.DefaultApplicationGroup, out NodeId[] certificateTypeIds, out byte[][] certificates);
-            
+
             Assert.That(certificateTypeIds.Length == 1);
             Assert.NotNull(certificates[0]);
             using (var x509 = new X509Certificate2(certificates[0]))
@@ -890,29 +894,29 @@ namespace Opc.Ua.Gds.Tests
         /// </summary>
         private async Task CreateCATestCerts(string tempStorePath)
         {
-            Assert.IsTrue(EraseStore(tempStorePath));
-
+            var certificateStoreIdentifier = new CertificateStoreIdentifier(tempStorePath, false);
+            Assert.IsTrue(EraseStore(certificateStoreIdentifier));
             string subjectName = "CN=CA Test Cert, O=OPC Foundation";
             X509Certificate2 newCACert = await CertificateFactory.CreateCertificate(
                 null, null, subjectName, null)
                 .SetCAConstraint()
                 .CreateForRSA()
-                .AddToStoreAsync(CertificateStoreType.Directory, tempStorePath).ConfigureAwait(false);
+                .AddToStoreAsync(certificateStoreIdentifier).ConfigureAwait(false);
 
             m_caCert = newCACert;
 
             // initialize cert revocation list (CRL)
-            X509CRL newCACrl = await CertificateGroup.RevokeCertificateAsync(tempStorePath, newCACert).ConfigureAwait(false);
+            X509CRL newCACrl = await CertificateGroup.RevokeCertificateAsync(certificateStoreIdentifier, newCACert).ConfigureAwait(false);
 
             m_caCrl = newCACrl;
         }
 
-        private bool EraseStore(string storePath)
+        private bool EraseStore(CertificateStoreIdentifier storeIdentifier)
         {
             bool result = true;
             try
             {
-                using (ICertificateStore store = CertificateStoreIdentifier.OpenStore(storePath))
+                using (ICertificateStore store = storeIdentifier.OpenStore())
                 {
                     var storeCerts = store.Enumerate().Result;
                     foreach (var cert in storeCerts)

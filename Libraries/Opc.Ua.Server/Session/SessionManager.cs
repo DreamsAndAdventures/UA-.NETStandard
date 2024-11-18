@@ -33,6 +33,7 @@ using System.Threading;
 using System.Security.Cryptography.X509Certificates;
 using System.Globalization;
 using System.Threading.Tasks;
+using System.Collections.Concurrent;
 
 namespace Opc.Ua.Server
 {
@@ -60,10 +61,9 @@ namespace Opc.Ua.Server
             m_maxRequestAge = configuration.ServerConfiguration.MaxRequestAge;
             m_maxBrowseContinuationPoints = configuration.ServerConfiguration.MaxBrowseContinuationPoints;
             m_maxHistoryContinuationPoints = configuration.ServerConfiguration.MaxHistoryContinuationPoints;
-            m_minNonceLength = configuration.SecurityConfiguration.NonceLength;
 
-            m_sessions = new Dictionary<NodeId, Session>();
-            m_lastSessionId = BitConverter.ToInt64(Utils.Nonce.CreateNonce(sizeof(long)), 0);
+            m_sessions = new ConcurrentDictionary<NodeId, Session>(Environment.ProcessorCount, m_maxSessionCount);
+            m_lastSessionId = BitConverter.ToInt64(Nonce.CreateRandomNonceData(sizeof(long)), 0);
 
             // create a event to signal shutdown.
             m_shutdownEvent = new ManualResetEvent(true);
@@ -87,17 +87,13 @@ namespace Opc.Ua.Server
         {
             if (disposing)
             {
-                List<Session> sessions = null;
+                // create snapshot of all sessions
+                var sessions = m_sessions.ToArray();
+                m_sessions.Clear();
 
-                lock (m_lock)
+                foreach (var sessionKeyValue in sessions)
                 {
-                    sessions = new List<Session>(m_sessions.Values);
-                    m_sessions.Clear();
-                }
-
-                foreach (Session session in sessions)
-                {
-                    Utils.SilentDispose(session);
+                    Utils.SilentDispose(sessionKeyValue.Value);
                 }
 
                 m_shutdownEvent.Set();
@@ -127,18 +123,16 @@ namespace Opc.Ua.Server
         /// </summary>
         public virtual void Shutdown()
         {
-            lock (m_lock)
+            // stop the monitoring thread.
+            m_shutdownEvent.Set();
+
+            // dispose of session objects using a snapshot.
+            var sessions = m_sessions.ToArray();
+            m_sessions.Clear();
+
+            foreach (var sessionKeyValue in sessions)
             {
-                // stop the monitoring thread.
-                m_shutdownEvent.Set();
-
-                // dispose of session objects.
-                foreach (Session session in m_sessions.Values)
-                {
-                    session.Dispose();
-                }
-
-                m_sessions.Clear();
+                Utils.SilentDispose(sessionKeyValue.Value);
             }
         }
 
@@ -153,6 +147,7 @@ namespace Opc.Ua.Server
             ApplicationDescription clientDescription,
             string endpointUrl,
             X509Certificate2 clientCertificate,
+            X509Certificate2Collection clientCertificateChain,
             double requestedSessionTimeout,
             uint maxResponseMessageSize,
             out NodeId sessionId,
@@ -161,6 +156,7 @@ namespace Opc.Ua.Server
             out double revisedSessionTimeout)
         {
             sessionId = 0;
+            serverNonce = null;
             revisedSessionTimeout = requestedSessionTimeout;
 
             Session session = null;
@@ -176,9 +172,11 @@ namespace Opc.Ua.Server
                 // check for same Nonce in another session
                 if (clientNonce != null)
                 {
-                    foreach (Session sessionIterator in m_sessions.Values)
+                    // iterate over key/value pairs in the dictionary with a thread safe iterator
+                    foreach (var sessionKeyValueIterator in m_sessions)
                     {
-                        if (Utils.CompareNonce(sessionIterator.ClientNonce, clientNonce))
+                        byte[] sessionClientNonce = sessionKeyValueIterator.Value?.ClientNonce;
+                        if (Nonce.CompareNonce(sessionClientNonce, clientNonce))
                         {
                             throw new ServiceResultException(StatusCodes.BadNonceInvalid);
                         }
@@ -191,14 +189,14 @@ namespace Opc.Ua.Server
                 {
                     if (context.ChannelContext.EndpointDescription.SecurityMode != MessageSecurityMode.None)
                     {
-                        authenticationToken = Utils.IncrementIdentifier(ref m_lastSessionId);
+                        authenticationToken = new NodeId(Utils.IncrementIdentifier(ref m_lastSessionId));
                     }
                 }
 
                 // must assign a hard-to-guess id if not secured.
                 if (authenticationToken == null)
                 {
-                    byte[] token = Utils.Nonce.CreateNonce(32);
+                    byte[] token = Nonce.CreateRandomNonceData(32);
                     authenticationToken = new NodeId(token);
                 }
 
@@ -214,7 +212,8 @@ namespace Opc.Ua.Server
                 }
 
                 // create server nonce.
-                serverNonce = Utils.Nonce.CreateNonce((uint)m_minNonceLength);
+                var serverNonceObject = Nonce.CreateNonce(context.ChannelContext.EndpointDescription.SecurityPolicyUri);
+
 
                 // assign client name.
                 if (String.IsNullOrEmpty(sessionName))
@@ -229,11 +228,12 @@ namespace Opc.Ua.Server
                     serverCertificate,
                     authenticationToken,
                     clientNonce,
-                    serverNonce,
+                    serverNonceObject,
                     sessionName,
                     clientDescription,
                     endpointUrl,
                     clientCertificate,
+                    clientCertificateChain,
                     revisedSessionTimeout,
                     maxResponseMessageSize,
                     m_maxRequestAge,
@@ -241,9 +241,13 @@ namespace Opc.Ua.Server
 
                 // get the session id.
                 sessionId = session.Id;
+                serverNonce = serverNonceObject.Data;
 
                 // save session.
-                m_sessions.Add(authenticationToken, session);
+                if (!m_sessions.TryAdd(authenticationToken, session))
+                {
+                    throw new ServiceResultException(StatusCodes.BadTooManySessions);
+                }
             }
 
             // raise session related event.
@@ -251,6 +255,42 @@ namespace Opc.Ua.Server
 
             // return session.
             return session;
+        }
+
+        /// <summary>
+        /// Creates a new session.
+        /// </summary>
+        [Obsolete("Use CreateSession that passes X509Certificate2Collection)")]
+        public virtual Session CreateSession(
+            OperationContext context,
+            X509Certificate2 serverCertificate,
+            string sessionName,
+            byte[] clientNonce,
+            ApplicationDescription clientDescription,
+            string endpointUrl,
+            X509Certificate2 clientCertificate,
+            double requestedSessionTimeout,
+            uint maxResponseMessageSize,
+            out NodeId sessionId,
+            out NodeId authenticationToken,
+            out byte[] serverNonce,
+            out double revisedSessionTimeout)
+        {
+            return CreateSession(
+              context,
+              serverCertificate,
+              sessionName,
+              clientNonce,
+              clientDescription,
+              endpointUrl,
+              clientCertificate,
+              null,
+              requestedSessionTimeout,
+              maxResponseMessageSize,
+              out sessionId,
+              out authenticationToken,
+              out serverNonce,
+              out revisedSessionTimeout);
         }
 
         /// <summary>
@@ -268,9 +308,17 @@ namespace Opc.Ua.Server
         {
             serverNonce = null;
 
+            Nonce serverNonceObject = null;
+
             Session session = null;
             UserIdentityToken newIdentity = null;
             UserTokenPolicy userTokenPolicy = null;
+
+            // fast path no lock
+            if (!m_sessions.TryGetValue(authenticationToken, out _))
+            {
+                throw new ServiceResultException(StatusCodes.BadSessionIdInvalid);
+            }
 
             lock (m_lock)
             {
@@ -292,7 +340,7 @@ namespace Opc.Ua.Server
                 }
 
                 // create new server nonce.
-                serverNonce = Utils.Nonce.CreateNonce((uint)m_minNonceLength);
+                serverNonceObject = Nonce.CreateNonce(context.ChannelContext.EndpointDescription.SecurityPolicyUri);
 
                 // validate before activation.
                 session.ValidateBeforeActivate(
@@ -301,12 +349,11 @@ namespace Opc.Ua.Server
                     clientSoftwareCertificates,
                     userIdentityToken,
                     userTokenSignature,
-                    localeIds,
-                    serverNonce,
                     out newIdentity,
                     out userTokenPolicy);
-            }
 
+                serverNonce = serverNonceObject.Data;
+            }
             IUserIdentity identity = null;
             IUserIdentity effectiveIdentity = null;
             ServiceResult error = null;
@@ -366,6 +413,7 @@ namespace Opc.Ua.Server
             }
 
             // activate session.
+
             bool contextChanged = session.Activate(
                 context,
                 clientSoftwareCertificates,
@@ -373,7 +421,7 @@ namespace Opc.Ua.Server
                 identity,
                 effectiveIdentity,
                 localeIds,
-                serverNonce);
+                serverNonceObject);
 
             // raise session related event.
             if (contextChanged)
@@ -393,22 +441,23 @@ namespace Opc.Ua.Server
         /// </remarks>
         public virtual void CloseSession(NodeId sessionId)
         {
-            // find the session.
             Session session = null;
 
-            lock (m_lock)
+            // thread safe search for the session.
+            foreach (KeyValuePair<NodeId, Session> current in m_sessions)
             {
-                foreach (KeyValuePair<NodeId, Session> current in m_sessions)
+                if (current.Value.Id == sessionId)
                 {
-                    if (current.Value.Id == sessionId)
+                    if (!m_sessions.TryRemove(current.Key, out session))
                     {
-                        session = current.Value;
-                        m_sessions.Remove(current.Key);
-                        break;
+                        // found but was already removed
+                        return;
                     }
+                    break;
                 }
             }
 
+            // close the session if removed.
             if (session != null)
             {
                 // raise session related event.
@@ -423,7 +472,6 @@ namespace Opc.Ua.Server
                     m_server.ServerDiagnostics.CurrentSessionCount--;
                 }
             }
-
         }
 
         /// <summary>
@@ -442,44 +490,41 @@ namespace Opc.Ua.Server
 
             try
             {
-                lock (m_lock)
+                // check for create session request.
+                if (requestType == RequestType.CreateSession || requestType == RequestType.ActivateSession)
                 {
-                    // check for create session request.
-                    if (requestType == RequestType.CreateSession || requestType == RequestType.ActivateSession)
-                    {
-                        return new OperationContext(requestHeader, requestType);
-                    }
+                    return new OperationContext(requestHeader, requestType);
+                }
 
-                    // find session.
-                    if (!m_sessions.TryGetValue(requestHeader.AuthenticationToken, out session))
-                    {
-                        EventHandler<ValidateSessionLessRequestEventArgs> handler = m_validateSessionLessRequest;
+                // find session.
+                if (!m_sessions.TryGetValue(requestHeader.AuthenticationToken, out session))
+                {
+                    EventHandler<ValidateSessionLessRequestEventArgs> handler = m_validateSessionLessRequest;
 
-                        if (handler != null)
+                    if (handler != null)
+                    {
+                        var args = new ValidateSessionLessRequestEventArgs(requestHeader.AuthenticationToken, requestType);
+                        handler(this, args);
+
+                        if (ServiceResult.IsBad(args.Error))
                         {
-                            var args = new ValidateSessionLessRequestEventArgs(requestHeader.AuthenticationToken, requestType);
-                            handler(this, args);
-
-                            if (ServiceResult.IsBad(args.Error))
-                            {
-                                throw new ServiceResultException(args.Error);
-                            }
-
-                            return new OperationContext(requestHeader, requestType, args.Identity);
+                            throw new ServiceResultException(args.Error);
                         }
 
-                        throw new ServiceResultException(StatusCodes.BadSessionIdInvalid);
+                        return new OperationContext(requestHeader, requestType, args.Identity);
                     }
 
-                    // validate request header.
-                    session.ValidateRequest(requestHeader, requestType);
-
-                    // validate user has permissions for additional info
-                    session.ValidateDiagnosticInfo(requestHeader);
-
-                    // return context.
-                    return new OperationContext(requestHeader, requestType, session);
+                    throw new ServiceResultException(StatusCodes.BadSessionIdInvalid);
                 }
+
+                // validate request header.
+                session.ValidateRequest(requestHeader, requestType);
+
+                // validate user has permissions for additional info
+                session.ValidateDiagnosticInfo(requestHeader);
+
+                // return context.
+                return new OperationContext(requestHeader, requestType, session);
             }
             catch (Exception e)
             {
@@ -508,11 +553,12 @@ namespace Opc.Ua.Server
             X509Certificate2 serverCertificate,
             NodeId sessionCookie,
             byte[] clientNonce,
-            byte[] serverNonce,
+            Nonce serverNonce,
             string sessionName,
             ApplicationDescription clientDescription,
             string endpointUrl,
             X509Certificate2 clientCertificate,
+            X509Certificate2Collection clientCertificateChain,
             double sessionTimeout,
             uint maxResponseMessageSize,
             int maxRequestAge, // TBD - Remove unused parameter.
@@ -529,6 +575,7 @@ namespace Opc.Ua.Server
                 clientDescription,
                 endpointUrl,
                 clientCertificate,
+                clientCertificateChain,
                 sessionTimeout,
                 maxResponseMessageSize,
                 m_maxRequestAge,
@@ -568,9 +615,9 @@ namespace Opc.Ua.Server
                 }
             }
         }
-        #endregion
+#endregion
 
-        #region Private Methods
+#region Private Methods
         /// <summary>
         /// Periodically checks if the sessions have timed out.
         /// </summary>
@@ -584,17 +631,10 @@ namespace Opc.Ua.Server
 
                 do
                 {
-                    Session[] sessions = null;
-
-                    lock (m_lock)
+                    // enumerator is thread safe
+                    foreach (var sessionKeyValue in m_sessions)
                     {
-                        sessions = new Session[m_sessions.Count];
-                        m_sessions.Values.CopyTo(sessions, 0);
-                    }
-
-                    for (int ii = 0; ii < sessions.Length; ii++)
-                    {
-                        var session = sessions[ii];
+                        Session session = sessionKeyValue.Value;
                         if (session.HasExpired)
                         {
                             // update diagnostics.
@@ -604,9 +644,9 @@ namespace Opc.Ua.Server
                             }
 
                             // raise audit event for session closed because of timeout
-                            m_server.ReportAuditCloseSessionEvent(null, sessions[ii], "Session/Timeout");
+                            m_server.ReportAuditCloseSessionEvent(null, session, "Session/Timeout");
 
-                            m_server.CloseSession(null, sessions[ii].Id, false);
+                            m_server.CloseSession(null, session.Id, false);
                         }
                         // if a session had no activity for the last m_minSessionTimeout milliseconds, send a keep alive event.
                         else if (session.ClientLastContactTime.AddMilliseconds(m_minSessionTimeout) < DateTime.UtcNow)
@@ -631,10 +671,10 @@ namespace Opc.Ua.Server
         }
         #endregion
 
-        #region Private Fields
+#region Private Fields
         private readonly object m_lock = new object();
         private IServerInternal m_server;
-        private Dictionary<NodeId, Session> m_sessions;
+        private ConcurrentDictionary<NodeId, Session> m_sessions;
         private long m_lastSessionId;
         private ManualResetEvent m_shutdownEvent;
 
@@ -642,9 +682,9 @@ namespace Opc.Ua.Server
         private int m_maxSessionTimeout;
         private int m_maxSessionCount;
         private int m_maxRequestAge;
+
         private int m_maxBrowseContinuationPoints;
         private int m_maxHistoryContinuationPoints;
-        private int m_minNonceLength;
 
         private readonly object m_eventLock = new object();
         private event SessionEventHandler m_sessionCreated;
@@ -653,9 +693,9 @@ namespace Opc.Ua.Server
         private event SessionEventHandler m_sessionChannelKeepAlive;
         private event ImpersonateEventHandler m_impersonateUser;
         private event EventHandler<ValidateSessionLessRequestEventArgs> m_validateSessionLessRequest;
-        #endregion
+#endregion
 
-        #region ISessionManager Members
+#region ISessionManager Members
         /// <inheritdoc/>
         public event SessionEventHandler SessionCreated
         {
@@ -789,16 +829,14 @@ namespace Opc.Ua.Server
         /// <inheritdoc/>
         public Session GetSession(NodeId authenticationToken)
         {
-
-            Session session = null;
-            lock (m_lock)
+            // find session.
+            if (m_sessions.TryGetValue(authenticationToken, out Session session))
             {
-                // find session.
-                m_sessions.TryGetValue(authenticationToken, out session);
+                return session;
             }
-            return session;
+            return null;
         }
-        #endregion
+#endregion
     }
 
     /// <summary>
@@ -889,13 +927,13 @@ namespace Opc.Ua.Server
     /// </summary>
     public delegate void SessionEventHandler(Session session, SessionEventReason reason);
 
-    #region ImpersonateEventArgs Class
+#region ImpersonateEventArgs Class
     /// <summary>
     /// A class which provides the event arguments for session related event.
     /// </summary>
     public class ImpersonateEventArgs : EventArgs
     {
-        #region Constructors
+#region Constructors
         /// <summary>
         /// Creates a new instance.
         /// </summary>
@@ -905,9 +943,9 @@ namespace Opc.Ua.Server
             m_userTokenPolicy = userTokenPolicy;
             m_endpointDescription = endpointDescription;
         }
-        #endregion
+#endregion
 
-        #region Public Properties
+#region Public Properties
         /// <summary>
         /// The new user identity for the session.
         /// </summary>
@@ -958,31 +996,31 @@ namespace Opc.Ua.Server
         {
             get { return m_endpointDescription; }
         }
-        #endregion
+#endregion
 
-        #region Private Fields
+#region Private Fields
         private UserIdentityToken m_newIdentity;
         private UserTokenPolicy m_userTokenPolicy;
         private ServiceResult m_identityValidationError;
         private IUserIdentity m_identity;
         private IUserIdentity m_effectiveIdentity;
         private EndpointDescription m_endpointDescription;
-        #endregion
+#endregion
     }
 
     /// <summary>
     /// The delegate for functions used to receive impersonation events.
     /// </summary>
     public delegate void ImpersonateEventHandler(Session session, ImpersonateEventArgs args);
-    #endregion
+#endregion
 
-    #region ImpersonateEventArgs Class
+#region ImpersonateEventArgs Class
     /// <summary>
     /// A class which provides the event arguments for session related event.
     /// </summary>
     public class ValidateSessionLessRequestEventArgs : EventArgs
     {
-        #region Constructors
+#region Constructors
         /// <summary>
         /// Creates a new instance.
         /// </summary>
@@ -991,9 +1029,9 @@ namespace Opc.Ua.Server
             AuthenticationToken = authenticationToken;
             RequestType = requestType;
         }
-        #endregion
+#endregion
 
-        #region Public Properties
+#region Public Properties
         /// <summary>
         /// The request type for the request.
         /// </summary>
@@ -1013,7 +1051,7 @@ namespace Opc.Ua.Server
         /// Set to indicate that an error occurred validating the session-less request and that it should be rejected.
         /// </summary>
         public ServiceResult Error { get; set; }
-        #endregion
+#endregion
     }
-    #endregion
+#endregion
 }

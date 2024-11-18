@@ -47,8 +47,9 @@ namespace Opc.Ua.Client.Tests
 
         public static readonly object[] FixtureArgs = {
             new object [] { Utils.UriSchemeOpcTcp},
-            new object [] { Utils.UriSchemeHttps},
-            new object [] { Utils.UriSchemeOpcHttps},
+            // https protocol security None is not supported
+            // new object [] { Utils.UriSchemeHttps},
+            // new object [] { Utils.UriSchemeOpcHttps},
         };
 
         public ClientTestNoSecurity()
@@ -99,6 +100,16 @@ namespace Opc.Ua.Client.Tests
             return _clientTest.TearDown();
         }
         #endregion
+
+        /// <summary>
+        /// GetEndpoints on the discovery channel,
+        /// the oversized message can pass because security None is enabled.
+        /// </summary>
+        [Test, Order(105)]
+        public void GetEndpointsOnDiscoveryChannel()
+        {
+            _clientTest.GetEndpointsOnDiscoveryChannel(true);
+        }
 
         [Test, Order(230)]
         public Task ReconnectJWTSecurityNone()

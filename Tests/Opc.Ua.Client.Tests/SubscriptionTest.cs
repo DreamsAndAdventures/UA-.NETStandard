@@ -63,7 +63,7 @@ namespace Opc.Ua.Client.Tests
             // create a new session for every test
             SingleSession = false;
             MaxChannelCount = 1000;
-            return base.OneTimeSetUpAsync(null, true);
+            return base.OneTimeSetUpAsync(writer: null, securityNone: true);
         }
 
         /// <summary>
@@ -474,14 +474,40 @@ namespace Opc.Ua.Client.Tests
         /// <summary>
         /// Open a session on a channel, then reconnect (activate)
         /// the same session on a new channel with saved session secrets.
+        /// Use only synchronous methods.
         /// </summary>
-        [Test, Combinatorial, Order(350)]
-        public async Task ReconnectWithSavedSessionSecrets(
-            [Values(SecurityPolicies.None, SecurityPolicies.Basic256Sha256)] string securityPolicy,
+        [Test, Combinatorial, Order(350), Explicit]
+        public Task ReconnectWithSavedSessionSecretsSync(
+            [Values(SecurityPolicies.None,
+            SecurityPolicies.Basic256Sha256,
+            SecurityPolicies.ECC_brainpoolP256r1,
+            SecurityPolicies.ECC_brainpoolP384r1,
+            SecurityPolicies.ECC_brainpoolP256r1,
+            SecurityPolicies.ECC_nistP384)] string securityPolicy,
             [Values(true, false)] bool anonymous,
             [Values(true, false)] bool sequentialPublishing,
-            [Values(true, false)] bool sendInitialValues,
-            [Values(true, false)] bool asyncTest)
+            [Values(true, false)] bool sendInitialValues)
+            => ReconnectWithSavedSessionSecretsAsync(securityPolicy, anonymous, sequentialPublishing, sendInitialValues, false);
+
+        /// <summary>
+        /// Open a session on a channel, then reconnect (activate)
+        /// the same session on a new channel with saved session secrets.
+        /// Use only asnc methods.
+        /// </summary>
+        [Test, Combinatorial, Order(351)]
+        public Task ReconnectWithSavedSessionSecretsOnlyAsync(
+            [Values(SecurityPolicies.None,
+            SecurityPolicies.Basic256Sha256,
+            SecurityPolicies.ECC_brainpoolP256r1,
+            SecurityPolicies.ECC_brainpoolP384r1,
+            SecurityPolicies.ECC_brainpoolP256r1,
+            SecurityPolicies.ECC_nistP384)] string securityPolicy,
+            [Values(true, false)] bool anonymous,
+            [Values(true, false)] bool sequentialPublishing,
+            [Values(true, false)] bool sendInitialValues)
+            => ReconnectWithSavedSessionSecretsAsync(securityPolicy, anonymous, sequentialPublishing, sendInitialValues, true);
+
+        public async Task ReconnectWithSavedSessionSecretsAsync(string securityPolicy, bool anonymous, bool sequentialPublishing, bool sendInitialValues, bool asyncTest)
         {
             const int kTestSubscriptions = 5;
             const int kDelay = 2_000;
@@ -495,7 +521,9 @@ namespace Opc.Ua.Client.Tests
             ConfiguredEndpoint endpoint = await ClientFixture.GetEndpointAsync(ServerUrl, securityPolicy, Endpoints).ConfigureAwait(false);
             Assert.NotNull(endpoint);
 
-            UserTokenPolicy identityPolicy = endpoint.Description.FindUserTokenPolicy(userIdentity.TokenType, userIdentity.IssuedTokenType);
+            UserTokenPolicy identityPolicy = endpoint.Description.FindUserTokenPolicy(userIdentity.TokenType,
+                userIdentity.IssuedTokenType,
+                endpoint.Description.SecurityPolicyUri);
             if (identityPolicy == null)
             {
                 Assert.Ignore($"No UserTokenPolicy found for {userIdentity.TokenType} / {userIdentity.IssuedTokenType}");
@@ -804,7 +832,15 @@ namespace Opc.Ua.Client.Tests
         }
 
         [Theory, Order(810)]
-        public async Task TransferSubscriptionAsync(TransferType transferType, bool sendInitialValues, bool sequentialPublishing, bool asyncTransfer)
+        [Explicit]
+        public Task TransferSubscriptionSync(TransferType transferType, bool sendInitialValues, bool sequentialPublishing)
+            => InternalTransferSubscriptionAsync(transferType, sendInitialValues, sequentialPublishing, false);
+
+        [Theory, Order(811)]
+        public Task TransferSubscriptionOnlyAsync(TransferType transferType, bool sendInitialValues, bool sequentialPublishing)
+            => InternalTransferSubscriptionAsync(transferType, sendInitialValues, sequentialPublishing, true);
+
+        public async Task InternalTransferSubscriptionAsync(TransferType transferType, bool sendInitialValues, bool sequentialPublishing, bool asyncTransfer)
         {
             const int kTestSubscriptions = 5;
             const int kDelay = 2_000;

@@ -277,19 +277,13 @@ namespace Opc.Ua.Core.Tests.Security.Certificates
             // check if complete chain should be sent.
             if (m_rootCACertificate != null && !m_rootCACertificate.IsEmpty)
             {
-                var byteServerCertificateChain = new List<byte>();
-                var certArray = m_rootCACertificate.Values.ToArray();
+                X509Certificate2[] certArray = m_rootCACertificate.Values.ToArray();
 
                 TestContext.Out.WriteLine("testing {0} certificates", certArray.Length);
 
-                for (int i = 0; i < certArray.Length; i++)
-                {
-                    byteServerCertificateChain.AddRange(certArray[i].RawData);
-                }
+                byte[] certBlob = Utils.CreateCertificateChainBlob(new X509Certificate2Collection(certArray));
 
-                var certBlob = byteServerCertificateChain.ToArray();
-
-                var singleBlob = AsnUtils.ParseX509Blob(certBlob);
+                byte[] singleBlob = AsnUtils.ParseX509Blob(certBlob).ToArray();
                 Assert.NotNull(singleBlob);
                 var certX = new X509Certificate2(singleBlob);
                 Assert.NotNull(certX);

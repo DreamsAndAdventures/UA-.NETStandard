@@ -17,6 +17,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Opc.Ua.Security.Certificates;
 using static Opc.Ua.Utils;
 
 namespace Opc.Ua.Bindings
@@ -35,27 +36,10 @@ namespace Opc.Ua.Bindings
             ITcpChannelListener listener,
             BufferManager bufferManager,
             ChannelQuotas quotas,
-            X509Certificate2 serverCertificate,
+            CertificateTypesProvider serverCertificateTypesProvider,
             EndpointDescriptionCollection endpoints)
         :
-            this(contextId, listener, bufferManager, quotas, serverCertificate, null, endpoints)
-        {
-            m_queuedResponses = new SortedDictionary<uint, IServiceResponse>();
-        }
-
-        /// <summary>
-        /// Attaches the object to an existing socket.
-        /// </summary>
-        public TcpServerChannel(
-            string contextId,
-            ITcpChannelListener listener,
-            BufferManager bufferManager,
-            ChannelQuotas quotas,
-            X509Certificate2 serverCertificate,
-            X509Certificate2Collection serverCertificateChain,
-            EndpointDescriptionCollection endpoints)
-        :
-            base(contextId, listener, bufferManager, quotas, serverCertificate, serverCertificateChain, endpoints)
+            base(contextId, listener, bufferManager, quotas, serverCertificateTypesProvider, endpoints)
         {
             m_queuedResponses = new SortedDictionary<uint, IServiceResponse>();
         }
@@ -360,8 +344,9 @@ namespace Opc.Ua.Bindings
 
                     // read requested buffer sizes.
                     protocolVersion = decoder.ReadUInt32(null);
-                    receiveBufferSize = decoder.ReadUInt32(null);
+                    // note: swapped the send and receive buffer size read to reflect the server view
                     sendBufferSize = decoder.ReadUInt32(null);
+                    receiveBufferSize = decoder.ReadUInt32(null);
                     maxMessageSize = decoder.ReadUInt32(null);
                     maxChunkCount = decoder.ReadUInt32(null);
 
@@ -394,26 +379,12 @@ namespace Opc.Ua.Bindings
                 }
 
                 // update receive buffer size.
-                if (receiveBufferSize < ReceiveBufferSize)
-                {
-                    ReceiveBufferSize = (int)receiveBufferSize;
-                }
-
-                if (ReceiveBufferSize < TcpMessageLimits.MinBufferSize)
-                {
-                    ReceiveBufferSize = TcpMessageLimits.MinBufferSize;
-                }
+                ReceiveBufferSize = Math.Min(ReceiveBufferSize, (int)receiveBufferSize);
+                ReceiveBufferSize = Math.Min(Math.Max(ReceiveBufferSize, TcpMessageLimits.MinBufferSize), TcpMessageLimits.MaxBufferSize);
 
                 // update send buffer size.
-                if (sendBufferSize < SendBufferSize)
-                {
-                    SendBufferSize = (int)sendBufferSize;
-                }
-
-                if (SendBufferSize < TcpMessageLimits.MinBufferSize)
-                {
-                    SendBufferSize = TcpMessageLimits.MinBufferSize;
-                }
+                SendBufferSize = Math.Min(SendBufferSize, (int)sendBufferSize);
+                SendBufferSize = Math.Min(Math.Max(SendBufferSize, TcpMessageLimits.MinBufferSize), TcpMessageLimits.MaxBufferSize);
 
                 // update the max message size.
                 if (maxMessageSize > 0 && maxMessageSize < MaxResponseMessageSize)
@@ -605,11 +576,11 @@ namespace Opc.Ua.Bindings
                 ChannelToken token = CreateToken();
 
                 token.TokenId = GetNewTokenId();
-                token.ServerNonce = CreateNonce();
+                token.ServerNonce = CreateNonce(ServerCertificate);
                 // check the client nonce.
                 token.ClientNonce = request.ClientNonce;
 
-                if (!ValidateNonce(token.ClientNonce))
+                if (!ValidateNonce(ClientCertificate, token.ClientNonce))
                 {
                     throw ServiceResultException.Create(StatusCodes.BadNonceInvalid, "Client nonce is not the correct length or not random enough.");
                 }

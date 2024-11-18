@@ -123,6 +123,9 @@ namespace Opc.Ua
         public string StorePath => m_storePath;
 
         /// <inheritdoc/>
+        public bool NoPrivateKeys => m_noPrivateKeys;
+
+        /// <inheritdoc/>
         public Task<X509Certificate2Collection> Enumerate()
         {
             using (X509Store store = new X509Store(m_storeName, m_storeLocation))
@@ -213,7 +216,15 @@ namespace Opc.Ua
 
         /// <inheritdoc/>
         /// <remarks>The LoadPrivateKey special handling is not necessary in this store.</remarks>
+        [Obsolete("Method is deprecated. Use only for RSA certificates, the replacing LoadPrivateKey with certificateType parameter should be used.")]
         public Task<X509Certificate2> LoadPrivateKey(string thumbprint, string subjectName, string password)
+        {
+            return Task.FromResult<X509Certificate2>(null);
+        }
+
+        /// <inheritdoc/>
+        /// <remarks>The LoadPrivateKey special handling is not necessary in this store.</remarks>
+        public Task<X509Certificate2> LoadPrivateKey(string thumbprint, string subjectName, NodeId certificateType, string password)
         {
             return Task.FromResult<X509Certificate2>(null);
         }
@@ -221,6 +232,8 @@ namespace Opc.Ua
         /// <inheritdoc/>
         /// <remarks>CRLs are only supported on Windows Platform.</remarks>
         public bool SupportsCRLs => PlatformHelper.IsWindowsWithCrlSupport();
+
+
 
         /// <inheritdoc/>
         /// <remarks>CRLs are only supported on Windows Platform.</remarks>
@@ -396,6 +409,12 @@ namespace Opc.Ua
 
                 return Task.FromResult(store.DeleteCrl(crl.RawData));
             }
+        }
+
+        /// <inheritdoc/>
+        public Task AddRejected(X509Certificate2Collection certificates, int maxCertificates)
+        {
+            return Task.CompletedTask;
         }
 
         private bool m_noPrivateKeys;
