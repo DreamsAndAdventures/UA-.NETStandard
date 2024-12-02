@@ -1664,6 +1664,31 @@ namespace Opc.Ua.Client
         }
 
         /// <summary>
+        /// Tells the server to refresh all conditions being monitored by the subscription.
+        /// </summary>
+        public bool ConditionRefresh2(uint monitoredItemId)
+        {
+            VerifySubscriptionState(true);
+
+            try
+            {
+                object[] inputArguments = new object[] { m_id, monitoredItemId };
+
+                m_session.Call(
+                    ObjectTypeIds.ConditionType,
+                    MethodIds.ConditionType_ConditionRefresh2,
+                    inputArguments);
+
+                return true;
+            }
+            catch (ServiceResultException sre)
+            {
+                Utils.LogError(sre, "SubscriptionId {0}: Failed to call ConditionRefresh2 on server", m_id);
+            }
+            return false;
+        }
+
+        /// <summary>
         /// Call the ResendData method on the server for this subscription.
         /// </summary>
         public bool ResendData()

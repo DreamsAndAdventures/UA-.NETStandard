@@ -263,6 +263,7 @@ namespace Quickstarts.ConsoleReferenceClient
                             uaClient.Session.MinPublishRequestCount = 3;
                             uaClient.Session.TransferSubscriptionsOnReconnect = true;
                             var samples = new ClientSamples(output, ClientBase.ValidateResponse, quitEvent, verbose);
+                            samples.m_cancellationToken = quitCTS.Token;
                             if (loadTypes)
                             {
                                 var complexTypeSystem = await samples.LoadTypeSystemAsync(uaClient.Session).ConfigureAwait(false);

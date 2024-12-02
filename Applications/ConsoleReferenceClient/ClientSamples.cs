@@ -38,6 +38,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Opc.Ua;
 using Opc.Ua.Client;
@@ -72,6 +73,8 @@ namespace Quickstarts
             m_verbose = verbose;
             m_desiredEventFields = new Dictionary<int, QualifiedNameCollection>();
             int eventIndexCounter = 0;
+            m_desiredEventFields.Add(eventIndexCounter++, new QualifiedNameCollection(new QualifiedName[] { BrowseNames.EventId }));
+            m_desiredEventFields.Add(eventIndexCounter++, new QualifiedNameCollection(new QualifiedName[] { BrowseNames.EventType }));
             m_desiredEventFields.Add(eventIndexCounter++, new QualifiedNameCollection(new QualifiedName[] { BrowseNames.Time }));
             m_desiredEventFields.Add(eventIndexCounter++, new QualifiedNameCollection(new QualifiedName[] { BrowseNames.ActiveState }));
             m_desiredEventFields.Add(eventIndexCounter++, new QualifiedNameCollection(new QualifiedName[] { BrowseNames.Message }));
@@ -339,6 +342,86 @@ namespace Quickstarts
             }
         }
 
+        public async void Refresh(MonitoredItem item, bool async, bool refresh2)
+        {
+            try
+            {
+                string title = "Refresh: [";
+
+                object[] inputArguments = new object[] { item.Subscription.Id };
+
+                // Define the UA Method to call
+                // Parent node - Objects\CTT\Alarms
+                // Method node - Objects\CTT\Alarms\Start
+                NodeId objectId = new NodeId(ObjectTypeIds.ConditionType);
+                NodeId methodId = new NodeId(MethodIds.ConditionType_ConditionRefresh);
+                if (refresh2)
+                {
+                    title = "Refresh2: [";
+                    methodId = new NodeId(MethodIds.ConditionType_ConditionRefresh2);
+                    inputArguments = new object[] { item.Subscription.Id, item.ServerId };
+                }
+
+                if (async)
+                {
+                    title += "Async]";
+                }
+                else
+                {
+                    title += "Sync]";
+                }
+
+
+
+
+                    IList<object> outputList = new  List<object>();
+
+                // Invoke Call service
+                m_output.WriteLine("Calling " + title);
+                if (async)
+                {
+                    if (refresh2)
+                    {
+                        await item.Subscription.ConditionRefresh2Async(item.ServerId, m_cancellationToken);
+                    }
+                    else
+                    {
+                        await item.Subscription.ConditionRefreshAsync(m_cancellationToken);
+                    }
+
+                    //outputList = await item.Subscription.Session.CallAsync(objectId, methodId,
+                    //    m_cancellationToken, inputArguments);
+                }
+                else
+                {
+                    if (refresh2)
+                    {
+                        item.Subscription.ConditionRefresh2(item.ServerId);
+                    }
+                    else
+                    {
+                        item.Subscription.ConditionRefresh();
+
+                    }
+
+//                    outputList = item.Subscription.Session.Call(objectId, methodId, inputArguments);
+                }
+
+                m_output.WriteLine(title + " call returned {0} output argument(s):", outputList.Count);
+
+                foreach (var outputArgument in outputList)
+                {
+                    m_output.WriteLine("     OutputValue = {0}", outputArgument.ToString());
+                }
+
+            }
+            catch (Exception ex)
+            {
+                m_output.WriteLine("Method call error: {0}", ex.Message);
+            }
+        }
+
+
         /// <summary>
         /// Create Subscription and MonitoredItems for DataChanges
         /// </summary>
@@ -471,6 +554,8 @@ namespace Quickstarts
                 whereClause.Push(FilterOperator.Equals, new FilterOperand[] { existingEventType, desiredEventType });
 
                 filter.WhereClause = whereClause;
+                // Archie Kill the where clause
+                filter.WhereClause = null;
 
                 eventMonitoredItem.Filter = filter;
                 eventMonitoredItem.NodeClass = NodeClass.Object;
@@ -1334,6 +1419,8 @@ namespace Quickstarts
                 // Log MonitoredItem Notification event
                 EventFieldList notification = e.NotificationValue as EventFieldList;
 
+                object eventId = null;
+
                 foreach (KeyValuePair<int, QualifiedNameCollection> entry in m_desiredEventFields)
                 {
                     Variant field = notification.EventFields[entry.Key];
@@ -1352,6 +1439,34 @@ namespace Quickstarts
                         }
 
                         string fieldName = fieldPath.ToString();
+
+                        if (fieldName.Equals("EventId"))
+                        {
+                            eventId = field.Value;
+                            m_output.WriteLine("\tField [{0}] \"{1}\" = [{2}]",
+                                entry.Key.ToString(), fieldName, Utils.ToHexString((byte[])field.Value));
+                        }
+                        else
+                        {
+                            m_output.WriteLine("\tField [{0}] \"{1}\" = [{2}]",
+                                entry.Key.ToString(), fieldName, field.Value);
+                        }
+
+
+                        if (fieldName.Equals("EventType"))
+                        {
+                            NodeId eventType = (NodeId)field.Value;
+                            if (eventType.Equals(ObjectTypeIds.RefreshStartEventType))
+                            {
+                                m_output.WriteLine("CONDITIONREFRESH START");
+                            }
+                            else if (eventType.Equals(ObjectTypeIds.RefreshEndEventType))
+                            {
+                                m_output.WriteLine("CONDITIONREFRESH COMPLETE");
+                            }
+                        }
+
+
                         if (fieldName.Equals("Time"))
                         {
                             try
@@ -1376,8 +1491,53 @@ namespace Quickstarts
                             }
                         }
 
-                        m_output.WriteLine("\tField [{0}] \"{1}\" = [{2}]",
-                            entry.Key.ToString(), fieldName, field.Value);
+                        if (fieldName.Equals("LimitState.CurrentState"))
+                        {
+                            // need the current EventId
+                            try
+                            {
+                                LocalizedText currentStateValue = (LocalizedText)field.Value;
+                                if (currentStateValue != null)
+                                {
+                                    string nowEventId = Utils.ToHexString((byte[])eventId);
+                                    string previousEventId = "";
+                                    if (m_lastEventId != null)
+                                    {
+                                        previousEventId = Utils.ToHexString((byte[])m_lastEventId);
+                                    }
+
+                                    if ( !nowEventId.Equals( previousEventId ) )
+                                    {
+                                        if (currentStateValue.Text.Equals("High"))
+                                        {
+                                            Refresh(monitoredItem, async: false, refresh2: false);
+                                        }
+                                        else if (currentStateValue.Text.Equals("HighHigh"))
+                                        {
+                                            Refresh(monitoredItem, async: false, refresh2: true);
+                                        }
+                                        else if (currentStateValue.Text.Equals("Low"))
+                                        {
+                                            Refresh(monitoredItem, async: true, refresh2: false);
+                                        }
+                                        else if (currentStateValue.Text.Equals("LowLow"))
+                                        {
+                                            Refresh(monitoredItem, async: true, refresh2: true);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        m_output.WriteLine("This should be the result of a conditionRefresh");
+                                    }
+
+                                    m_lastEventId = eventId;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                m_output.WriteLine("Unexpected error retrieving Event LimitState.CurrentState Field Value: {0}", ex.Message);
+                            }
+                        }
                     }
                 }
             }
@@ -1446,6 +1606,8 @@ namespace Quickstarts
         }
         #endregion
 
+        public CancellationToken m_cancellationToken;
+
         private Action<IList, IList> m_validateResponse;
         private readonly TextWriter m_output;
         private readonly ManualResetEvent m_quitEvent;
@@ -1453,5 +1615,6 @@ namespace Quickstarts
         private Dictionary<int, QualifiedNameCollection> m_desiredEventFields = null;
         private int m_processedEvents = 0;
         private DateTime m_lastEventTime = DateTime.Now;
+        private object m_lastEventId = null;
     }
 }
