@@ -1,8 +1,4 @@
 
-// Archie - December 17 2024
-// Requires discussion with Part 9 Editor
-#define AddActiveState
-
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -506,35 +502,6 @@ namespace Opc.Ua.Server.Tests
                 desiredSuppressedValue });
 
             #endregion
-
-#if AddActiveState
-
-            #region Add Active State
-
-            #region Active Index 0
-
-            SimpleAttributeOperand activeState = new SimpleAttributeOperand() {
-                AttributeId = Attributes.Value,
-                TypeDefinitionId = null,
-                BrowsePath = new QualifiedNameCollection(new QualifiedName[] {
-                    BrowseNames.ActiveState })
-            };
-
-            LiteralOperand activeValue = new LiteralOperand();
-            activeValue.Value = new Variant(Active);
-
-            whereClause.Push(FilterOperator.Equals, new FilterOperand[] {
-                activeState,
-                activeValue });
-
-            #endregion
-
-            whereClause.Push(FilterOperator.And, new ElementOperand[] {
-                new ElementOperand(1),
-                new ElementOperand(2) });
-
-            #endregion
-#endif
 
             whereClause.Push(FilterOperator.And, new ElementOperand[] {
                 new ElementOperand(0),
