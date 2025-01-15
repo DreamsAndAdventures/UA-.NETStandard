@@ -70,6 +70,25 @@ namespace Opc.Ua
             }
         }
 
+        /// <summary>
+        /// Refers to the lifetime of an alarm.
+        /// If there is an active change of state, a new LifetimeId is generated
+        /// This is used by SupportsFilteredRetain in MonitoredItem.
+        /// This is not a defined UA Alarm property, but is internal for server application use
+        /// </summary>
+        public Guid LifetimeId
+        {
+            get
+            {
+                return m_lifetimeId;
+            }
+
+            set
+            {
+                m_lifetimeId = value;
+            }
+        }
+
         #endregion
 
         #region Public Methods
@@ -786,6 +805,7 @@ namespace Opc.Ua
         /// </summary>
         protected Dictionary<string, ConditionState> m_branches = null;
         private PropertyState<bool> m_supportsFilteredRetain = null;
+        private Guid m_lifetimeId = Guid.Empty;
 
         #endregion
     }

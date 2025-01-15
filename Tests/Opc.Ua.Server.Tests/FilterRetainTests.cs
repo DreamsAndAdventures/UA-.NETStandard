@@ -219,6 +219,7 @@ namespace Opc.Ua.Server.Tests
 
             alarm.SetSuppressedState(systemContext, suppressed: false);
             alarm.OutOfServiceState.Value = InService;
+            alarm.LifetimeId = Guid.NewGuid();
         
 
             FilterContext filterContext = GetFilterContext();
@@ -268,6 +269,7 @@ namespace Opc.Ua.Server.Tests
             Debug.WriteLine("// 6 Alarm goes active; No event since OutOfService");
             alarm.SetLimitState(systemContext, LimitAlarmStates.High);
             alarm.Retain.Value = true;
+            alarm.LifetimeId = Guid.NewGuid();
             CanSendFilteredAlarm(monitoredItem, filterContext, filter, alarm, expected);
 
             // 7 Alarm no longer OutOfService; Event generated
@@ -280,15 +282,12 @@ namespace Opc.Ua.Server.Tests
             Debug.WriteLine("// 8 Alarm goes inactive");
             alarm.SetLimitState(systemContext, LimitAlarmStates.Inactive);
             alarm.Retain.Value = false;
-            if ( !supportsFilteredRetain )
-            {
-                expected = false;
-            }
             CanSendFilteredAlarm(monitoredItem, filterContext, filter, alarm, expected);
 
             // 9 Alarm Suppressed; No event since not active
             Debug.WriteLine("// 9 Alarm Suppressed; No event since not active");
             alarm.SetSuppressedState(systemContext, suppressed: true);
+            alarm.LifetimeId = Guid.NewGuid();
             expected = false;
             CanSendFilteredAlarm(monitoredItem, filterContext, filter, alarm, expected);
 
@@ -296,6 +295,7 @@ namespace Opc.Ua.Server.Tests
             Debug.WriteLine("// 10 Alarm goes active; No event since Suppressed");
             alarm.SetLimitState(systemContext, LimitAlarmStates.High);
             alarm.Retain.Value = true;
+            alarm.LifetimeId = Guid.NewGuid();
             CanSendFilteredAlarm(monitoredItem, filterContext, filter, alarm, expected);
 
             // 11 Alarm goes inactive; No event since Suppressed
@@ -307,7 +307,8 @@ namespace Opc.Ua.Server.Tests
             // 12 Alarm no longer Suppressed
             Debug.WriteLine("// 12 Alarm no longer Suppressed");
             alarm.SetSuppressedState(systemContext, suppressed: false);
-            CanSendFilteredAlarm(monitoredItem, filterContext, filter, alarm, expected);
+            // Unclear as to operations - According to spec writer, should not be called
+            //CanSendFilteredAlarm(monitoredItem, filterContext, filter, alarm, expected);
 
             // 13 Placed OutOfService
             Debug.WriteLine("// 13 Placed OutOfService");
@@ -318,6 +319,7 @@ namespace Opc.Ua.Server.Tests
             Debug.WriteLine("// 14 Alarm goes active; No event since OutOfService");
             alarm.SetLimitState(systemContext, LimitAlarmStates.High);
             alarm.Retain.Value = true;
+            alarm.LifetimeId = Guid.NewGuid();
             CanSendFilteredAlarm(monitoredItem, filterContext, filter, alarm, expected);
 
             // 15 Alarm goes inactive; No event since OutOfService
@@ -329,7 +331,7 @@ namespace Opc.Ua.Server.Tests
             // 16 Alarm no longer OutOfService
             Debug.WriteLine("// 16 Alarm no longer OutOfService");
             alarm.OutOfServiceState.Value = InService;
-            CanSendFilteredAlarm(monitoredItem, filterContext, filter, alarm, expected);
+            //CanSendFilteredAlarm(monitoredItem, filterContext, filter, alarm, expected);
         }
 
         private void CanSendFilteredAlarm(

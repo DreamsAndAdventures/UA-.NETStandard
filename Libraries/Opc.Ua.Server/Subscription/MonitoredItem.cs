@@ -1120,23 +1120,31 @@ namespace Opc.Ua.Server
             if (conditionId != null && alarmCondition != null)
             {
                 HashSet<string> conditionIds = GetFilteredRetainConditionIds();
+                Dictionary<string, Guid> map = GetFilteredRetainConditionIdMap();
 
                 string key = conditionId.ToString();
 
                 bool saved = conditionIds.Contains(key);
+                Guid previouslifetimeId = Guid.Empty;
 
-                if ( saved )
+                if (saved)
                 {
                     conditionIds.Remove(key);
+                    if (map.ContainsKey(key))
+                    {
+                        map.TryGetValue(key, out previouslifetimeId);
+                        map.Remove(key);
+                    }
                 }
 
                 if ( passedFilter )
                 {
                     conditionIds.Add(key);
+                    map.Add(key, alarmCondition.LifetimeId);
                 }
                 else
                 {
-                    if ( saved )
+                    if ( saved && previouslifetimeId == alarmCondition.LifetimeId )
                     {
                         canSend = true;
                     }
@@ -1155,6 +1163,17 @@ namespace Opc.Ua.Server
 
             return m_filteredRetainConditionIds;
         }
+
+        private Dictionary<string, Guid> GetFilteredRetainConditionIdMap()
+        {
+            if (m_filteredRetainConditionIdMap == null)
+            {
+                m_filteredRetainConditionIdMap = new Dictionary<string, Guid>();
+            }
+
+            return m_filteredRetainConditionIdMap;
+        }
+
 
 
         /// <summary>
@@ -1952,6 +1971,7 @@ namespace Opc.Ua.Server
         private bool m_triggered;
         private bool m_resendData;
         private HashSet<string> m_filteredRetainConditionIds = null;
+        private Dictionary<string, Guid> m_filteredRetainConditionIdMap = null;
 
 
         #endregion

@@ -133,11 +133,20 @@ namespace Alarms
         {
             ConditionState alarm = GetAlarm();
 
-            if (ShouldEvent() || message.Length > 0)
+            bool shouldEvent = ShouldEvent();
+
+            if (shouldEvent || message.Length > 0)
             {
                 CreateBranch();
 
                 int newSeverity = GetSeverity();
+
+                if ( shouldEvent && newSeverity != AlarmDefines.INACTIVE_SEVERITY )
+                {
+                    // Need a new Lifetime ID
+                    Guid Guid = new Guid(message);
+                    alarm.LifetimeId = Guid;
+                }
 
                 alarm.SetSeverity(SystemContext, (EventSeverity)newSeverity);
                 if (message.Length == 0)
