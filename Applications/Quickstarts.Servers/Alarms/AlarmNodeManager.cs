@@ -239,6 +239,12 @@ namespace Alarms
                     #endregion
 
                     AddPredefinedNode(SystemContext, alarmsFolder);
+
+                    foreach( AlarmHolder alarmHolder in m_alarms.Values)
+                    {
+                        alarmHolder.Start(500000);
+                    }
+                    
                     StartTimer();
                     m_allowEntry = true;
 

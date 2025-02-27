@@ -132,6 +132,15 @@ namespace Quickstarts
                     foreach (var factory in nodeManagerFactories)
                     {
                         m_server.AddNodeManager(factory);
+
+                        //if ( factory.NamespacesUris != null && factory.NamespacesUris.Count > 0 )
+                        //{
+                        //    string first = factory.NamespacesUris[0].ToLower();
+                        //    if (first.Contains("ua/alarms/"))
+                        //    {
+                        //        m_server.AddNodeManager(factory);
+                        //    }
+                        //}
                     }
                 }
             }
