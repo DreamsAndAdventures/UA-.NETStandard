@@ -29,21 +29,23 @@
 
 using System;
 using System.Collections.Generic;
+using System.Security.Claims;
 using System.Threading;
+using System.Xml.Linq;
 using Opc.Ua;
 using Opc.Ua.Server;
 
-namespace Alarms
+namespace FullAlarms
 {
     /// <summary>
     /// The factory for the Alarm Node Manager.
     /// </summary>
-    public class AlarmNodeManagerFactory : INodeManagerFactory
+    public class FullAlarmNodeManagerFactory : INodeManagerFactory
     {
         /// <inheritdoc/>
         public INodeManager Create(IServerInternal server, ApplicationConfiguration configuration)
         {
-            return new AlarmNodeManager(server, configuration, NamespacesUris.ToArray());
+            return new FullAlarmNodeManager(server, configuration, NamespacesUris.ToArray());
         }
 
         /// <inheritdoc/>
@@ -62,13 +64,13 @@ namespace Alarms
     /// <summary>
     /// A node manager for a server that exposes several variables.
     /// </summary>
-    public class AlarmNodeManager : CustomNodeManager2
+    public class FullAlarmNodeManager : CustomNodeManager2
     {
         #region Constructors
         /// <summary>
         /// Initializes the node manager.
         /// </summary>
-        public AlarmNodeManager(IServerInternal server, ApplicationConfiguration configuration, string[] namespaceUris) :
+        public FullAlarmNodeManager(IServerInternal server, ApplicationConfiguration configuration, string[] namespaceUris) :
             base(server, configuration, namespaceUris)
         {
         }
@@ -138,10 +140,10 @@ namespace Alarms
                 {
                     #region Initialize
 
-                    string alarmsName = "Alarms";
+                    string alarmsName = "FullAlarms";
                     string alarmsNodeName = alarmsName;
 
-                    Type alarmControllerType = Type.GetType("Alarms.AlarmController");
+                    Type alarmControllerType = Type.GetType("FullAlarms.AlarmController");
                     int interval = 1000;
                     string intervalString = interval.ToString();
 
@@ -162,13 +164,11 @@ namespace Alarms
                     string startMethodName = "Start";
                     string startMethodNodeName = alarmsNodeName + "." + startMethodName;
                     MethodState startMethod = AlarmHelpers.CreateMethod(alarmsFolder, NamespaceIndex, startMethodNodeName, startMethodName);
-                    AlarmHelpers.AddStartInputParameters(startMethod, NamespaceIndex);
                     startMethod.OnCallMethod = new GenericMethodCalledEventHandler(OnStart);
 
                     string startBranchMethodName = "StartBranch";
                     string startBranchMethodNodeName = alarmsNodeName + "." + startBranchMethodName;
                     MethodState startBranchMethod = AlarmHelpers.CreateMethod(alarmsFolder, NamespaceIndex, startBranchMethodNodeName, startBranchMethodName);
-                    AlarmHelpers.AddStartInputParameters(startBranchMethod, NamespaceIndex);
                     startBranchMethod.OnCallMethod = new GenericMethodCalledEventHandler(OnStartBranch);
 
                     string endMethodName = "End";
@@ -184,7 +184,8 @@ namespace Alarms
                     BaseDataVariableState analogTrigger = AlarmHelpers.CreateVariable(alarmsFolder,
                         NamespaceIndex, analogTriggerNodeName, analogTriggerName);
                     analogTrigger.OnWriteValue = OnWriteAlarmTrigger;
-                    AlarmController analogAlarmController = (AlarmController)Activator.CreateInstance(alarmControllerType, analogTrigger, interval, false);
+                    var something = Activator.CreateInstance(alarmControllerType, analogTrigger, interval, false);
+                    AlarmController analogAlarmController = (AlarmController)something;
                     SourceController analogSourceController = new SourceController(analogTrigger, analogAlarmController);
                     m_triggerMap.Add("Analog", analogSourceController);
 
@@ -201,44 +202,212 @@ namespace Alarms
 
                     #region Create Alarms
 
-                    AlarmHolder mandatoryExclusiveLevel = new ExclusiveLevelHolder(
-                        this,
-                        alarmsFolder,
-                        analogSourceController,
-                        intervalString,
-                        GetSupportedAlarmConditionType(ref conditionTypeIndex),
-                        alarmControllerType,
-                        interval,
-                        optional: false);
+                    string[] folders = { "Mandatory", "Optional", "NoSource" };
 
-                    m_alarms.Add(mandatoryExclusiveLevel.AlarmNodeName, mandatoryExclusiveLevel);
+                    NodeId nullNodeId = new NodeId(0);
 
-                    AlarmHolder mandatoryNonExclusiveLevel = new NonExclusiveLevelHolder(
-                        this,
-                        alarmsFolder,
-                        analogSourceController,
-                        intervalString,
-                        GetSupportedAlarmConditionType(ref conditionTypeIndex),
-                        alarmControllerType,
-                        interval,
-                        optional: false);
-                    m_alarms.Add(mandatoryNonExclusiveLevel.AlarmNodeName, mandatoryNonExclusiveLevel);
+                    foreach (string folder in folders)
+                    {
+                        #region Create Sub Folders
 
-                    AlarmHolder offNormal = new OffNormalAlarmTypeHolder(
+                        string subFoldersName = folder;
+                        string subFoldersNodeName = subFoldersName;
+                        FolderState subFolder = CreateFolder(alarmsFolder, subFoldersNodeName, subFoldersName);
+                        references.Add(new NodeStateReference(ReferenceTypes.Organizes, false, subFolder.NodeId));
+
+                        #endregion
+
+                        string name = intervalString;// + "." + subFoldersName;
+                        bool optional = folder.Equals("Optional", StringComparison.OrdinalIgnoreCase);
+
+                        AlarmHolder exclusiveLevel = new ExclusiveLevelHolder(
+                            this,
+                            subFolder,
+                            analogSourceController,
+                            name,
+                            GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                            alarmControllerType,
+                            interval,
+                            optional: optional);
+
+                        AddAlarmHolder(folder, exclusiveLevel, ref nullNodeId);
+
+                        AlarmHolder exclusiveLimit = new ExclusiveLimitHolder(
+                            this,
+                            subFolder,
+                            analogSourceController,
+                            name,
+                            GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                            alarmControllerType,
+                            interval,
+                            optional: optional);
+
+                        AddAlarmHolder(folder, exclusiveLimit, ref nullNodeId);
+
+                        AlarmHolder nonExclusiveLevel = new NonExclusiveLevelHolder(
+                            this,
+                            subFolder,
+                            analogSourceController,
+                            name,
+                            GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                            alarmControllerType,
+                            interval,
+                            optional: optional);
+
+                        AddAlarmHolder(folder, nonExclusiveLevel, ref nullNodeId);
+
+                        AlarmHolder nonExclusiveLimit = new NonExclusiveLimitHolder(
+                            this,
+                            subFolder,
+                            analogSourceController,
+                            name,
+                            GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                            alarmControllerType,
+                            interval,
+                            optional: optional);
+
+                        AddAlarmHolder(folder, nonExclusiveLimit, ref nullNodeId);
+
+                        AlarmHolder discrete = new DiscreteHolder(
+                            this,
+                            subFolder,
+                            booleanSourceController,
+                            name,
+                            GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                            alarmControllerType,
+                            interval,
+                            optional: optional);
+
+                        AddAlarmHolder(folder, discrete, ref nullNodeId);
+
+                        AlarmHolder offNormal = new OffNormalAlarmTypeHolder(
+                            this,
+                            subFolder,
+                            booleanSourceController,
+                            name,
+                            GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                            alarmControllerType,
+                            interval,
+                            optional: optional);
+
+                        AddAlarmHolder(folder, offNormal, ref nullNodeId);
+
+                        AlarmHolder systemOffNormal = new SystemOffNormalAlarmTypeHolder(
+                            this,
+                            subFolder,
+                            booleanSourceController,
+                            name,
+                            GetSupportedAlarmConditionType(ref conditionTypeIndex),
+                            alarmControllerType,
+                            interval,
+                            optional: optional);
+
+                        AddAlarmHolder(folder, systemOffNormal, ref nullNodeId);
+
+
+                    }
+
+                    #endregion
+
+                    #region CertificateExpiration
+
+                    AlarmHolder certificateExprirationAlarmHolder = new CertificateExpirationAlarmTypeHolder(
                         this,
                         alarmsFolder,
                         booleanSourceController,
-                        intervalString,
+                        "",
                         GetSupportedAlarmConditionType(ref conditionTypeIndex),
                         alarmControllerType,
                         interval,
                         optional: false);
-                    m_alarms.Add(offNormal.AlarmNodeName, offNormal);
+
+                    m_certificateExpiration = certificateExprirationAlarmHolder.Alarm as CertificateExpirationAlarmState;
+
+                    string certificateExpirationNodeIdString = m_certificateExpiration.NodeId.Identifier as string;
+
+                    {
+                        string methodName = "SetValid";
+                        string methodNodeName = certificateExpirationNodeIdString + "." + methodName;
+                        MethodState method = AlarmHelpers.CreateMethod(
+                            m_certificateExpiration, NamespaceIndex, methodNodeName, methodName);
+                        method.OnCallMethod = new GenericMethodCalledEventHandler(OnSetValid);
+                    }
+
+                    {
+                        string methodName = "SetCloseToLimit";
+                        string methodNodeName = certificateExpirationNodeIdString + "." + methodName;
+                        MethodState method = AlarmHelpers.CreateMethod(
+                            m_certificateExpiration, NamespaceIndex, methodNodeName, methodName);
+                        method.OnCallMethod = new GenericMethodCalledEventHandler(OnSetCloseToLimit);
+                    }
+
+                    {
+                        string methodName = "SetWithinLimit";
+                        string methodNodeName = certificateExpirationNodeIdString + "." + methodName;
+                        MethodState method = AlarmHelpers.CreateMethod(
+                            m_certificateExpiration, NamespaceIndex, methodNodeName, methodName);
+                        method.OnCallMethod = new GenericMethodCalledEventHandler(OnSetWithinLimit);
+                    }
+
+                    {
+                        string methodName = "SetExpired";
+                        string methodNodeName = certificateExpirationNodeIdString + "." + methodName;
+                        MethodState method = AlarmHelpers.CreateMethod(
+                            m_certificateExpiration, NamespaceIndex, methodNodeName, methodName);
+                        method.OnCallMethod = new GenericMethodCalledEventHandler(OnSetExpired);
+                    }
+
+
+                    /*
+                                        {
+                                            string expirationAlarmName = "CertificateExpiration";
+                    //                        string expirationAlarmNodeName = alarmsNodeName + "." + expirationAlarmName;
+
+                                            m_certificateExpiration = new CertificateExpirationAlarmState(alarmsFolder);
+                                            string alarmName = expirationAlarmName;
+                                            string alarmNodeId = (string)alarmsFolder.NodeId.Identifier + "." + expirationAlarmName;
+                                            m_certificateExpiration.SymbolicName = alarmName;
+
+                                            NodeId createNodeId = new NodeId(alarmNodeId, NamespaceIndex);
+                                            QualifiedName createQualifiedName = new QualifiedName(alarmName, NamespaceIndex);
+                                            LocalizedText createLocalizedText = new LocalizedText(alarmName);
+
+
+                                            m_certificateExpiration.ReferenceTypeId = ReferenceTypeIds.HasComponent;
+                                            m_certificateExpiration.Create(
+                                                SystemContext,
+                                                createNodeId,
+                                                createQualifiedName,
+                                                createLocalizedText,
+                                                true);
+
+
+                                            alarmsFolder.AddChild(m_certificateExpiration);
+
+                                            m_certificateExpiration.EventId.Value = Guid.NewGuid().ToByteArray();
+                                            m_certificateExpiration.EventType.Value = new NodeId(ObjectTypes.CertificateExpirationAlarmType);
+                                            m_certificateExpiration.SourceNode.Value = null;
+                                            m_certificateExpiration.SourceName.Value = null;
+                                            m_certificateExpiration.Time.Value = DateTime.UtcNow;
+                                            m_certificateExpiration.ReceiveTime.Value = m_certificateExpiration.Time.Value;
+                                            m_certificateExpiration.Message.Value = "CertificateExpiration Initialized";
+                                            m_certificateExpiration.Severity.Value = AlarmDefines.INACTIVE_SEVERITY;
+
+
+
+
+                                        }
+
+                                        */
 
 
                     #endregion
 
                     AddPredefinedNode(SystemContext, alarmsFolder);
+                    foreach (AlarmHolder alarmHolder in m_alarms.Values)
+                    {
+                        alarmHolder.Start(500000);
+                    }
                     StartTimer();
                     m_allowEntry = true;
 
@@ -330,6 +499,63 @@ namespace Alarms
                                 }
                             }
                         }
+
+                        if (m_certificateExpiration != null &&
+                            m_certificateExpiration.ExpirationDate != null &&
+                            m_certificateExpiration.ExpirationLimit != null)
+                        {
+                            DateTime now = DateTime.UtcNow;
+                            DateTime expiry = m_certificateExpiration.ExpirationDate.Value;
+                            DateTime limit = expiry.AddMilliseconds(-m_certificateExpiration.ExpirationLimit.Value);
+
+                            bool report = false;
+                            string message = string.Empty;
+                            bool setAlarm = false;
+                            int severity = AlarmDefines.INACTIVE_SEVERITY;
+
+                            if ( limit <= now )
+                            {
+                                severity = AlarmDefines.CERTIFICATE_LIMIT_SEVERITY;
+                                message = "Certificate Close to Expiry";
+                                if ( expiry < now ) 
+                                {
+                                    severity = AlarmDefines.CERTIFICATE_EXPIRED_SEVERITY;
+                                    message = "Certificate Expired";
+                                }
+
+                                if (m_certificateExpiration.Severity.Value != severity)
+                                {
+                                    report = true;
+                                    setAlarm = true;
+                                }
+                            }
+                            else
+                            {
+                                if (m_certificateExpiration.ActiveState.Id.Value)
+                                {
+                                    report = true;
+                                    setAlarm = false;
+                                    message = "Certificate is now valid";
+                                }
+                            }
+
+                            if (report)
+                            {
+                                m_certificateExpiration.SetActiveState(SystemContext, setAlarm);
+                                m_certificateExpiration.Message.Value = message;
+                                m_certificateExpiration.SetSeverity(SystemContext, (Opc.Ua.EventSeverity)severity);
+                                m_certificateExpiration.EventId.Value = Guid.NewGuid().ToByteArray();
+                                m_certificateExpiration.Time.Value = DateTime.UtcNow;
+                                m_certificateExpiration.ReceiveTime.Value = m_certificateExpiration.Time.Value;
+
+                                m_certificateExpiration.ClearChangeMasks(SystemContext, true);
+
+                                InstanceStateSnapshot eventSnapshot = new InstanceStateSnapshot();
+                                eventSnapshot.Initialize(SystemContext, m_certificateExpiration);
+
+                                m_certificateExpiration.ReportEvent(SystemContext, eventSnapshot);
+                            }
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -357,56 +583,9 @@ namespace Alarms
             IList<object> outputArguments)
         {
             // all arguments must be provided.
-            UInt32 seconds;
-            if (inputArguments.Count < 1)
-            {
-                return StatusCodes.BadArgumentsMissing;
-            }
+            UInt32 seconds = 30000;
 
-            try
-            {
-                seconds = (UInt32)inputArguments[0];
-            }
-            catch
-            {
-                return new ServiceResult(StatusCodes.BadInvalidArgument);
-            }
-
-            ServiceResult result = ServiceResult.Good;
-
-            Dictionary<string, SourceController> sourceControllers = GetUnitAlarms(node);
-            if (sourceControllers == null)
-            {
-                result = StatusCodes.BadNodeIdUnknown;
-            }
-
-            if (sourceControllers != null)
-            {
-                Utils.LogInfo("Starting up alarm group {0}", GetUnitFromNodeId(node.NodeId));
-
-                lock (m_alarms)
-                {
-                    foreach (SourceController sourceController in sourceControllers.Values)
-                    {
-                        IList<IReference> references = new List<IReference>();
-                        sourceController.Source.GetReferences(SystemContext, references, ReferenceTypes.HasCondition, false);
-                        foreach (IReference reference in references)
-                        {
-                            string identifier = (string)reference.TargetId.ToString();
-                            if (m_alarms.ContainsKey(identifier))
-                            {
-                                AlarmHolder holder = m_alarms[identifier];
-                                holder.SetBranching(false);
-                                holder.Start(seconds);
-                                bool updated = holder.Controller.Update(SystemContext);
-                                holder.Update(updated);
-                            }
-                        }
-                    }
-                }
-            }
-
-            return result;
+            return Start(node, seconds, false);
         }
 
         public ServiceResult OnStartBranch(
@@ -416,21 +595,13 @@ namespace Alarms
             IList<object> outputArguments)
         {
             // all arguments must be provided.
-            UInt32 seconds;
-            if (inputArguments.Count < 1)
-            {
-                return StatusCodes.BadArgumentsMissing;
-            }
+            UInt32 seconds = 120;
 
-            try
-            {
-                seconds = (UInt32)inputArguments[0];
-            }
-            catch
-            {
-                return new ServiceResult(StatusCodes.BadInvalidArgument);
-            }
+            return Start(node, seconds, true);
+        }
 
+        private ServiceResult Start(NodeState node, uint seconds, bool branch)
+        {
             ServiceResult result = ServiceResult.Good;
 
             Dictionary<string, SourceController> sourceControllers = GetUnitAlarms(node);
@@ -455,7 +626,10 @@ namespace Alarms
                             if (m_alarms.ContainsKey(identifier))
                             {
                                 AlarmHolder holder = m_alarms[identifier];
-                                holder.SetBranching(true);
+                                if (branch)
+                                {
+                                    holder.SetBranching(true);
+                                }
                                 holder.Start(seconds);
                                 bool updated = holder.Controller.Update(SystemContext);
                                 holder.Update(updated);
@@ -560,6 +734,93 @@ namespace Alarms
 
         #endregion
 
+        public ServiceResult OnSetValid(
+            ISystemContext context,
+            NodeState node,
+            IList<object> inputArguments,
+            IList<object> outputArguments)
+        {
+            DateTime expire = DateTime.UtcNow;
+            lock (m_alarms)
+            {
+                m_certificateExpiration.ExpirationDate.Value = expire.AddMonths(12);
+            }
+            m_certificateExpiration.ClearChangeMasks(SystemContext, true);
+
+            return ServiceResult.Good;
+        }
+
+        public ServiceResult OnSetCloseToLimit(
+            ISystemContext context,
+            NodeState node,
+            IList<object> inputArguments,
+            IList<object> outputArguments)
+        {
+            DateTime expire = DateTime.UtcNow;
+
+            lock (m_alarms)
+            {
+                if (m_certificateExpiration.ExpirationLimit != null &&
+                    m_certificateExpiration.ExpirationLimit.Value > 0)
+                {
+                    double secondsToExpire = m_certificateExpiration.ExpirationLimit.Value / 1000;
+
+                    // Add another ten seconds
+                    secondsToExpire += 10.0;
+                    m_certificateExpiration.ExpirationDate.Value = expire.AddSeconds(secondsToExpire);
+                }
+            }
+            m_certificateExpiration.ClearChangeMasks(SystemContext, true);
+
+
+            return ServiceResult.Good;
+        }
+
+        public ServiceResult OnSetWithinLimit(
+            ISystemContext context,
+            NodeState node,
+            IList<object> inputArguments,
+            IList<object> outputArguments)
+        {
+            DateTime expire = DateTime.UtcNow;
+
+            lock (m_alarms)
+            {
+                if (m_certificateExpiration.ExpirationLimit != null &&
+                    m_certificateExpiration.ExpirationLimit.Value > 0)
+                {
+                    double secondsToExpire = m_certificateExpiration.ExpirationLimit.Value / 1000;
+
+                    // Subtract ten seconds
+                    secondsToExpire -= 10.0;
+                    m_certificateExpiration.ExpirationDate.Value = expire.AddSeconds(secondsToExpire);
+                }
+            }
+            m_certificateExpiration.ClearChangeMasks(SystemContext, true);
+
+
+            return ServiceResult.Good;
+        }
+
+        public ServiceResult OnSetExpired(
+            ISystemContext context,
+            NodeState node,
+            IList<object> inputArguments,
+            IList<object> outputArguments)
+        {
+            DateTime expire = DateTime.UtcNow;
+
+            lock (m_alarms)
+            {
+                double secondsToExpire = -10.0;
+                m_certificateExpiration.ExpirationDate.Value = expire.AddSeconds(secondsToExpire);
+            }
+
+            m_certificateExpiration.ClearChangeMasks(SystemContext, true);
+
+            return ServiceResult.Good;
+        }
+
         #region Helpers
 
         private AlarmHolder GetAlarmHolder(NodeState node)
@@ -577,11 +838,7 @@ namespace Alarms
                 string unmodifiedName = node.Identifier.ToString();
 
                 // This is bad, but I'm not sure why the NodeName is being attached with an underscore, it messes with this lookup.
-#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-                string name = unmodifiedName.Replace("Alarms_", "Alarms.", StringComparison.Ordinal);
-#else
                 string name = unmodifiedName.Replace("Alarms_", "Alarms.");
-#endif
 
                 string mapName = name;
                 if (name.EndsWith(AlarmDefines.TRIGGER_EXTENSION) || name.EndsWith(AlarmDefines.ALARM_EXTENSION))
@@ -667,11 +924,7 @@ namespace Alarms
                 // Alarms.UnitName.AnalogSource
                 if (splitString.Length >= 2)
                 {
-#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-                    sourceName = splitString[splitString.Length - 1].Replace("Source", "", StringComparison.Ordinal);
-#else
                     sourceName = splitString[splitString.Length - 1].Replace("Source", "");
-#endif
                 }
             }
 
@@ -688,6 +941,35 @@ namespace Alarms
             }
             return conditionType;
         }
+
+        private void RemoveSource(string folder, BaseEventState alarm, ref NodeId nodeId)
+        {
+            if (folder.Equals("NoSource", StringComparison.OrdinalIgnoreCase))
+            {
+                AlarmConditionState alarmCondition = alarm as AlarmConditionState;
+                if (alarmCondition != null)
+                {
+                    if (nodeId == null)
+                    {
+                        nodeId = new NodeId(0);
+                    }
+                    else
+                    {
+                        nodeId = null;
+                    }
+
+                    alarmCondition.InputNode.Value = nodeId;
+                    alarmCondition.SourceName.Value = "Internal";
+                }
+            }
+        }
+
+        private void AddAlarmHolder(string folder, AlarmHolder alarmHolder, ref NodeId nodeId )
+        {
+            RemoveSource(folder, alarmHolder.Alarm, ref nodeId);
+            m_alarms.Add(alarmHolder.AlarmNodeName, alarmHolder);
+        }
+
         #endregion
 
         #endregion
@@ -895,6 +1177,7 @@ namespace Alarms
         }
         #endregion
 
+
         #region Public Methods
         public NodeHandle FindBranchNodeHandle(ISystemContext systemContext, NodeHandle initialHandle, CallMethodRequest methodToCall)
         {
@@ -1004,6 +1287,8 @@ namespace Alarms
 
         private const UInt16 kSimulationInterval = 100;
         private Timer m_simulationTimer;
+
+        private CertificateExpirationAlarmState m_certificateExpiration = null;
         #endregion
 
     }
